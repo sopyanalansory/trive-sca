@@ -3,17 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle login logic here
     console.log("Login attempt:", { email, password, rememberMe });
+    
+    // Redirect to accounts page after successful login
+    router.push("/accounts");
   };
 
   return (
@@ -159,7 +164,7 @@ export default function LoginPage() {
                   </div>
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center bg-[#69d7f6] rounded-[65px] text-[#2b2c24] text-[15px] min-w-[217px] font-medium leading-4 tracking-[-0.03em] pt-4 px-[25px] pb-[13px] text-center transition-colors duration-[120ms] ease hover:bg-[#5bc7e6] focus:outline-none"
+                    className="inline-flex items-center justify-center bg-[#69d7f6] rounded-[65px] text-[#2b2c24] text-[15px] min-w-[217px] font-medium leading-4 tracking-[-0.03em] pt-4 px-[25px] pb-[13px] text-center transition-colors duration-120 ease hover:bg-[#5bc7e6] focus:outline-none"
                   >
                     Masuk
                   </button>
