@@ -5,15 +5,106 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+// Dummy data untuk login sementara
+const DUMMY_USERS = [
+  { email: "admin@triveinvest.co.id", password: "Admin123" },
+  { email: "user@triveinvest.co.id", password: "User1234" },
+  { email: "test@triveinvest.co.id", password: "Test1234" },
+];
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [showPasswordTooltip, setShowPasswordTooltip] = useState(false);
   const router = useRouter();
+
+  const validateEmail = (emailValue: string): boolean => {
+    if (!emailValue.trim()) {
+      setEmailError("Email diperlukan");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailValue)) {
+      setEmailError("Email tidak valid");
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validatePassword = (passwordValue: string): boolean => {
+    if (!passwordValue.trim()) {
+      setPasswordError("Kata sandi diperlukan");
+      return false;
+    }
+    if (passwordValue.length < 8 || passwordValue.length > 15) {
+      setPasswordError("Kata sandi harus terdiri dari 8-15 karakter");
+      return false;
+    }
+    const hasLowerCase = /[a-z]/.test(passwordValue);
+    const hasUpperCase = /[A-Z]/.test(passwordValue);
+    const hasNumber = /[0-9]/.test(passwordValue);
+    
+    if (!hasLowerCase || !hasUpperCase || !hasNumber) {
+      setPasswordError("Kata sandi harus berisi huruf kecil, huruf besar, dan angka");
+      return false;
+    }
+    setPasswordError("");
+    return true;
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    setLoginError(""); // Clear login error when user types
+    if (emailError) {
+      validateEmail(e.target.value);
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    setLoginError(""); // Clear login error when user types
+    if (passwordError) {
+      validatePassword(e.target.value);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    validateEmail(email);
+  };
+
+  const handlePasswordBlur = () => {
+    validatePassword(password);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+
+    if (!isEmailValid || !isPasswordValid) {
+      return;
+    }
+
+    // Clear previous login error
+    setLoginError("");
+
+    // Check against dummy data
+    const user = DUMMY_USERS.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+
+    if (!user) {
+      setLoginError("Akun ini tidak terdaftar atau kata sandi Anda saat ini salah!");
+      return;
+    }
+
     // Handle login logic here
     console.log("Login attempt:", { email, password, rememberMe });
     
@@ -62,7 +153,6 @@ export default function LoginPage() {
               <h2 className="text-4xl font-medium text-black mb-6">
                 Masuk ke client area
               </h2>
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email Field */}
                 <div>
@@ -71,11 +161,16 @@ export default function LoginPage() {
                     id="email"
                     name="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
+                    onBlur={handleEmailBlur}
                     placeholder="Email"
-                    className="w-full bg-white border border-white rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none"
-                    required
+                    className={`w-full bg-white border rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none ${
+                      emailError ? "border-red-500" : "border-white"
+                    }`}
                   />
+                  {emailError && (
+                    <p className="text-red-500 text-sm mt-1 ml-2">{emailError}</p>
+                  )}
                 </div>
 
                 {/* Password Field */}
@@ -86,16 +181,54 @@ export default function LoginPage() {
                       id="password"
                       name="password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={handlePasswordChange}
+                      onBlur={handlePasswordBlur}
                       placeholder="Kata sandi"
-                      className="w-full bg-white border border-white rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pr-20 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none"
-                      required
+                      className={`w-full bg-white border rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pr-24 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none ${
+                        passwordError ? "border-red-500" : "border-white"
+                      }`}
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center gap-2">
+                      {/* Info Icon with Tooltip */}
+                      <div className="relative flex items-center justify-center">
+                        <button
+                          type="button"
+                          onMouseEnter={() => setShowPasswordTooltip(true)}
+                          onMouseLeave={() => setShowPasswordTooltip(false)}
+                          className="text-[#666666] hover:text-black transition-colors cursor-help flex items-center justify-center"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </button>
+                        {/* Tooltip */}
+                        {showPasswordTooltip && (
+                          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-[280px] bg-[#4a4a4a] text-white text-xs rounded-lg px-4 py-3 shadow-lg z-50">
+                            <p className="leading-relaxed">
+                              Kata sandi harus terdiri dari 8-15 karakter dan berisi
+                              masing-masing jenis karakter berikut: huruf kecil, huruf
+                              besar, angka.
+                            </p>
+                            {/* Arrow */}
+                            <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-b-[6px] border-r-[6px] border-t-transparent border-b-transparent border-r-[#4a4a4a]"></div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Hide/Show Password Icon */}
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="text-[#666666] hover:text-black transition-colors"
+                        className="text-[#666666] hover:text-black transition-colors flex items-center justify-center"
                       >
                         <svg
                           className="w-5 h-5"
@@ -132,7 +265,16 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
+                  {passwordError && (
+                    <p className="text-red-500 text-sm mt-1 ml-2">{passwordError}</p>
+                  )}
                 </div>
+
+                {loginError && (
+                  <div className="mb-4">
+                    <p className="text-red-500 text-[12px] pl-[22px]">{loginError}</p>
+                  </div>
+                )}
 
                 {/* Forgot Password */}
                 <div>
