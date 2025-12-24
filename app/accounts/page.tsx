@@ -3,11 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AccountsPage() {
   const [activeTab, setActiveTab] = useState("live");
   const [selectedAccount, setSelectedAccount] = useState("Semua akun live");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileHovered, setProfileHovered] = useState(false);
+  const router = useRouter();
+
+  // Check if user has token, redirect to login if not
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+    }
+  }, [router]);
 
   // Set initial sidebar state based on screen size
   useEffect(() => {
@@ -34,6 +45,14 @@ export default function AccountsPage() {
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setSidebarOpen(false);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar"
         />
       )}
 
@@ -41,7 +60,7 @@ export default function AccountsPage() {
       <aside
         className={`${
           sidebarOpen ? "w-64 translate-x-0" : "-translate-x-full lg:translate-x-0 w-20"
-        } fixed lg:static bg-[#24252c] min-h-screen flex flex-col transition-all duration-300 ease-in-out z-50 lg:z-auto`}
+        } fixed lg:static bg-[#24252c] min-h-screen flex flex-col transition-all duration-300 ease-in-out z-50 lg:z-50`}
       >
         {/* Logo */}
         <div className="p-6 border-b border-[#334155]">
@@ -60,7 +79,17 @@ export default function AccountsPage() {
         </div>
 
         {/* User Profile */}
-        <div className="p-4 border-b border-[#334155] flex items-center justify-between cursor-pointer hover:bg-[#334155] transition-colors">
+        <button
+          type="button"
+          className="relative w-full p-4 border-b border-[#334155] flex items-center justify-between cursor-pointer hover:bg-[#334155] transition-colors text-left"
+          onMouseEnter={() => setProfileHovered(true)}
+          onMouseLeave={() => setProfileHovered(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setProfileHovered(!profileHovered);
+            }
+          }}
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#464857] flex items-center justify-center text-white font-semibold shrink-0">
               M
@@ -86,7 +115,8 @@ export default function AccountsPage() {
               />
             </svg>
           )}
-        </div>
+          
+        </button>
 
         {/* Navigation Menu */}
         <nav className="flex-1 p-4">
@@ -278,6 +308,119 @@ export default function AccountsPage() {
             </li>
           </ul>
         </nav>
+
+        {/* Profile Dropdown Menu - White Sidebar (Full Height) */}
+        {profileHovered && sidebarOpen && (
+        // {true && (
+          <div 
+            className={`fixed top-0 w-64 h-screen bg-white shadow-xl z-[100] border-l border-gray-200 flex flex-col ${
+              sidebarOpen ? "left-64" : "left-20"
+            }`}
+            onMouseEnter={() => setProfileHovered(true)}
+            onMouseLeave={() => setProfileHovered(false)}
+          >
+            {/* Header with Close Button */}
+            <div className="p-4 flex items-center justify-end">
+              {/* <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#464857] flex items-center justify-center text-white font-semibold shrink-0">
+                  M
+                </div>
+                <div>
+                  <p className="text-black text-sm font-semibold">MOHAMMAD SOPYAN</p>
+                  <p className="text-gray-500 text-xs">sopyan@example.com</p>
+                </div>
+              </div> */}
+              <button
+                onClick={() => setProfileHovered(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                aria-label="Close menu"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Menu Content */}
+            <div className="flex-1 overflow-y-auto py-4">
+              {/* Akun Section */}
+              <div className="px-4 mb-4">
+                <p className="text-sm font-semibold text-black mb-2">Akun</p>
+                <Link
+                  href="/accounts"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                >
+                  Akun
+                </Link>
+                <Link
+                  href="/profile"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                >
+                  Profil
+                </Link>
+              </div>
+
+              {/* Bahasa Section */}
+              <div className="px-4 mb-4">
+                <p className="text-sm font-semibold text-black mb-2">Bahasa</p>
+                <Link
+                  href="/language"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                >
+                  Bahasa
+                </Link>
+              </div>
+
+              {/* Mode Gelap Toggle */}
+              <div className="px-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-black">Mode Gelap</span>
+                  <button
+                    className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-[#69d7f6] focus:ring-offset-2"
+                    role="switch"
+                    aria-checked="false"
+                  >
+                    <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-1" />
+                  </button>
+                </div>
+                
+                {/* Keluar Button */}
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("token");
+                    router.push("/login");
+                  }}
+                  className="flex items-center gap-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors mt-2 w-full text-left"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  <span>Keluar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* Tombol bulat biru untuk toggle sidebar - selalu ada */}
