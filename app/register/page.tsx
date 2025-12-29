@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -30,6 +31,9 @@ export default function RegisterPage() {
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const router = useRouter();
 
   // Countdown timer untuk resend code
   useEffect(() => {
@@ -256,17 +260,32 @@ export default function RegisterPage() {
     setIsSendingCode(true);
     
     try {
-      const fullPhoneNumber = getFullPhoneNumber();
-      
-      // TODO: Ganti dengan API call yang sebenarnya
-      // Contoh: await sendVerificationCode(fullPhoneNumber);
-      
-      // Simulasi API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      console.log("Verification code sent to:", fullPhoneNumber);
+      const response = await fetch("/api/auth/send-verification-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: phone,
+          countryCode: countryCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Gagal mengirim kode verifikasi. Silakan coba lagi.");
+        return;
+      }
+
       setIsCodeSent(true);
       setResendCountdown(60); // Set countdown 60 detik
+      
+      // In development, show the code in console/alert for testing
+      if (data.code) {
+        console.log("Verification code (dev only):", data.code);
+        alert(`Kode verifikasi (untuk testing): ${data.code}`);
+      }
     } catch (error) {
       console.error("Error sending verification code:", error);
       alert("Gagal mengirim kode verifikasi. Silakan coba lagi.");
@@ -275,8 +294,9 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError("");
     
     // Validate all fields
     const isNameValid = validateName(name);
@@ -309,23 +329,47 @@ export default function RegisterPage() {
       return;
     }
 
-    // Handle registration logic here
-    const normalizedPhone = getNormalizedPhone();
-    const fullPhoneNumber = getFullPhoneNumber();
-    
-    console.log("Registration attempt:", { 
-      name, 
-      email, 
-      countryCode, 
-      phone: normalizedPhone, // Nomor yang sudah dinormalisasi
-      fullPhoneNumber, // Nomor lengkap dengan country code untuk API
-      verificationCode,
-      password, 
-      confirmPassword, 
-      referralCode, 
-      marketingConsent, 
-      termsConsent 
-    });
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone,
+          countryCode: countryCode,
+          password: password,
+          verificationCode: verificationCode.trim(),
+          referralCode: referralCode.trim() || null,
+          marketingConsent: marketingConsent,
+          termsConsent: termsConsent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setSubmitError(data.error || "Terjadi kesalahan saat registrasi. Silakan coba lagi.");
+        return;
+      }
+
+      // Save token to localStorage
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      // Redirect to accounts page
+      router.push("/accounts");
+    } catch (error) {
+      console.error("Registration error:", error);
+      setSubmitError("Terjadi kesalahan saat registrasi. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -719,13 +763,21 @@ export default function RegisterPage() {
                   )}
                 </div>
 
+                {/* Submit Error */}
+                {submitError && (
+                  <div className="mb-4">
+                    <p className="text-red-500 text-xs sm:text-sm ml-2">{submitError}</p>
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <div className="flex items-center justify-center">
                   <button
                     type="submit"
-                    className="w-full sm:w-auto inline-flex items-center justify-center bg-[#69d7f6] rounded-[65px] text-[#2b2c24] text-sm sm:text-[15px] min-w-[217px] font-medium leading-4 tracking-[-0.03em] pt-4 px-[25px] pb-[13px] text-center transition-colors duration-120 ease hover:bg-[#5bc7e6] focus:outline-none"
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto inline-flex items-center justify-center bg-[#69d7f6] rounded-[65px] text-[#2b2c24] text-sm sm:text-[15px] min-w-[217px] font-medium leading-4 tracking-[-0.03em] pt-4 px-[25px] pb-[13px] text-center transition-colors duration-120 ease hover:bg-[#5bc7e6] focus:outline-none disabled:bg-[#d1d5db] disabled:text-[#9ca3af] disabled:cursor-not-allowed"
                   >
-                    Daftar
+                    {isSubmitting ? "Mendaftar..." : "Daftar"}
                   </button>
                 </div>
 

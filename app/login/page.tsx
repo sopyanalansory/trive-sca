@@ -5,13 +5,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-// Dummy data untuk login sementara
-const DUMMY_USERS = [
-  { email: "admin@triveinvest.co.id", password: "Admin123" },
-  { email: "user@triveinvest.co.id", password: "User1234" },
-  { email: "test@triveinvest.co.id", password: "Test1234" },
-];
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +14,7 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState("");
   const [loginError, setLoginError] = useState("");
   const [showPasswordTooltip, setShowPasswordTooltip] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   // Check if user already has token, redirect to accounts
@@ -111,7 +105,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const isEmailValid = validateEmail(email);
@@ -123,38 +117,50 @@ export default function LoginPage() {
 
     // Clear previous login error
     setLoginError("");
+    setIsSubmitting(true);
 
-    // Check against dummy data
-    const user = DUMMY_USERS.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password,
+        }),
+      });
 
-    if (!user) {
-      setLoginError("Akun ini tidak terdaftar atau kata sandi Anda saat ini salah!");
-      return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLoginError(data.error || "Terjadi kesalahan saat login. Silakan coba lagi.");
+        return;
+      }
+
+      // Save token to localStorage
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      
+      // Handle remember me functionality
+      // Only save email to localStorage (not password for security)
+      // Password should be handled by browser password manager (more secure)
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+      // Never save password to localStorage - let browser password manager handle it
+      
+      // Redirect to accounts page after successful login
+      router.push("/accounts");
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError("Terjadi kesalahan saat login. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Generate token (in real app, this would come from API)
-    const token = `token_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    // Save token to localStorage
-    localStorage.setItem("token", token);
-    
-    // Handle remember me functionality
-    // Only save email to localStorage (not password for security)
-    // Password should be handled by browser password manager (more secure)
-    if (rememberMe) {
-      localStorage.setItem("rememberedEmail", email);
-    } else {
-      localStorage.removeItem("rememberedEmail");
-    }
-    // Never save password to localStorage - let browser password manager handle it
-    
-    // Handle login logic here
-    console.log("Login attempt:", { email, password, rememberMe });
-    
-    // Redirect to accounts page after successful login
-    router.push("/accounts");
   };
 
   return (
@@ -376,9 +382,10 @@ export default function LoginPage() {
                   <div className="flex justify-center sm:justify-end">
                     <button
                       type="submit"
-                      className="w-full sm:w-auto inline-flex items-center justify-center bg-[#69d7f6] rounded-[65px] text-[#2b2c24] text-sm sm:text-[15px] sm:min-w-[217px] font-medium leading-4 tracking-[-0.03em] pt-3 sm:pt-4 px-6 sm:px-[25px] pb-3 sm:pb-[13px] text-center transition-colors duration-120 ease hover:bg-[#5bc7e6] focus:outline-none"
+                      disabled={isSubmitting}
+                      className="w-full sm:w-auto inline-flex items-center justify-center bg-[#69d7f6] rounded-[65px] text-[#2b2c24] text-sm sm:text-[15px] sm:min-w-[217px] font-medium leading-4 tracking-[-0.03em] pt-3 sm:pt-4 px-6 sm:px-[25px] pb-3 sm:pb-[13px] text-center transition-colors duration-120 ease hover:bg-[#5bc7e6] focus:outline-none disabled:bg-[#d1d5db] disabled:text-[#9ca3af] disabled:cursor-not-allowed"
                     >
-                      Masuk
+                      {isSubmitting ? "Masuk..." : "Masuk"}
                     </button>
                   </div>
                 </div>
