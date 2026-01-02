@@ -52,27 +52,28 @@ export async function POST(request: NextRequest) {
     // For now, we'll just log it. In production, you should send via SMS service
     console.log(`Verification code for ${fullPhoneNumber}: ${code}`);
     
-    // Check if we should return code for testing
-    // Support NODE_ENV=development or SHOW_VERIFICATION_CODE=true
-    // Note: NODE_ENV in Next.js can be 'production', 'development', or 'test'
-    const isDevelopment = process.env.NODE_ENV === 'development' || 
-                         process.env.SHOW_VERIFICATION_CODE === 'true' ||
-                         process.env.SHOW_VERIFICATION_CODE === '1';
+    // For now, always return code for testing
+    // TODO: In production, set HIDE_VERIFICATION_CODE=true to disable returning code
+    const hideCode = process.env.HIDE_VERIFICATION_CODE === 'true' || 
+                     process.env.HIDE_VERIFICATION_CODE === '1';
     
-    // In development, return the code for testing
-    // In production, only send via SMS (code won't be returned)
-    if (isDevelopment) {
-      console.log(`[DEV] Verification code returned in response for ${fullPhoneNumber}`);
+    // Debug logging
+    console.log(`[DEBUG] HIDE_VERIFICATION_CODE: "${process.env.HIDE_VERIFICATION_CODE}", hideCode: ${hideCode}`);
+    
+    // Return code unless explicitly hidden
+    if (!hideCode) {
+      console.log(`[DEBUG] Returning verification code: ${code}`);
       return NextResponse.json(
         {
           message: 'Kode verifikasi telah dikirim',
-          // Only return code in development for testing
-          code: code,
+          code: code, // Always return code for testing unless HIDE_VERIFICATION_CODE=true
         },
         { status: 200 }
       );
     }
 
+    // Don't return code (production mode)
+    console.log(`[PROD] Not returning verification code (HIDE_VERIFICATION_CODE is enabled)`);
     return NextResponse.json(
       { message: 'Kode verifikasi telah dikirim' },
       { status: 200 }
