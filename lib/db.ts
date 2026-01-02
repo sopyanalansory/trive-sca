@@ -36,6 +36,10 @@ const getDbConfig = () => {
   const databaseUrl = process.env.DATABASE_URL;
   
   if (databaseUrl && typeof databaseUrl === 'string' && databaseUrl.trim() !== '') {
+    // Parse SSL mode from connection string
+    const sslModeMatch = databaseUrl.match(/[?&]sslmode=([^&]+)/i);
+    const sslMode = sslModeMatch ? sslModeMatch[1].toLowerCase() : null;
+    
     // Check if it's a cloud database (RDS, Supabase, Neon, etc.)
     const isCloudDb = databaseUrl.includes('rds.aliyuncs.com') || 
                      databaseUrl.includes('supabase') || 
@@ -43,16 +47,46 @@ const getDbConfig = () => {
                      databaseUrl.includes('railway') ||
                      databaseUrl.includes('render') ||
                      databaseUrl.includes('heroku') ||
-                     databaseUrl.includes('amazonaws.com') ||
-                     databaseUrl.includes('sslmode=require');
+                     databaseUrl.includes('amazonaws.com');
     
-    // Enable SSL for production or cloud databases
-    const needsSSL = process.env.NODE_ENV === 'production' || isCloudDb;
-    
-    return {
-      connectionString: databaseUrl,
-      ssl: needsSSL ? { rejectUnauthorized: false } : false,
-    };
+    // Handle SSL configuration based on sslmode parameter
+    if (sslMode === 'require' || sslMode === 'verify-full' || sslMode === 'verify-ca') {
+      // For require/verify modes, explicitly set SSL config
+      return {
+        connectionString: databaseUrl,
+        ssl: { rejectUnauthorized: sslMode === 'verify-full' || sslMode === 'verify-ca' },
+      };
+    } else if (sslMode === 'prefer' || sslMode === 'allow') {
+      // For prefer/allow, try SSL but don't require it
+      return {
+        connectionString: databaseUrl,
+        ssl: false, // Let pg library negotiate
+      };
+    } else if (sslMode === 'disable') {
+      // Explicitly disable SSL
+      return {
+        connectionString: databaseUrl,
+        ssl: false,
+      };
+    } else if (sslMode) {
+      // Unknown sslmode, pass connection string as-is
+      return {
+        connectionString: databaseUrl,
+      };
+    } else {
+      // No sslmode specified, enable SSL for production or cloud databases
+      if (process.env.NODE_ENV === 'production' || isCloudDb) {
+        return {
+          connectionString: databaseUrl,
+          ssl: { rejectUnauthorized: false },
+        };
+      } else {
+        return {
+          connectionString: databaseUrl,
+          ssl: false,
+        };
+      }
+    }
   }
   
   // Fallback to individual config if DATABASE_URL is not set
