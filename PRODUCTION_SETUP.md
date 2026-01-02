@@ -314,6 +314,142 @@ curl ipinfo.io/ip
 4. **Add server IP** ke whitelist (format: `xxx.xxx.xxx.xxx/32`)
 5. **Save** dan tunggu beberapa menit untuk apply
 
+### 8. Deploy / Redeploy Aplikasi ke Server
+
+#### Quick Deploy (Manual)
+
+```bash
+# 1. Masuk ke directory aplikasi
+cd /var/www/trive/trive-sca
+
+# 2. Pull latest code dari Git
+git pull origin main
+
+# 3. Install dependencies (jika ada package baru)
+npm install
+
+# 4. Build aplikasi Next.js
+npm run build
+
+# 5. Restart aplikasi (pilih salah satu sesuai setup Anda)
+```
+
+#### Jika Menggunakan PM2:
+
+```bash
+# Restart aplikasi dengan PM2
+pm2 restart trive-sca
+
+# Atau jika belum ada, start dengan PM2:
+pm2 start npm --name "trive-sca" -- start
+pm2 save
+pm2 startup  # Untuk auto-start saat reboot
+```
+
+#### Jika Menggunakan Systemd:
+
+```bash
+# Restart service
+sudo systemctl restart trive-sca
+
+# Atau start jika belum running:
+sudo systemctl start trive-sca
+
+# Check status:
+sudo systemctl status trive-sca
+```
+
+#### Jika Tanpa Process Manager (Manual):
+
+```bash
+# Stop aplikasi yang sedang running (Ctrl+C jika di terminal, atau kill process)
+
+# Start aplikasi di background:
+nohup npm start > app.log 2>&1 &
+
+# Atau gunakan screen/tmux:
+screen -S trive-sca
+npm start
+# Tekan Ctrl+A kemudian D untuk detach
+```
+
+#### Script Deploy Otomatis
+
+Anda juga bisa buat script deploy untuk memudahkan:
+
+**Buat file `deploy.sh`:**
+```bash
+#!/bin/bash
+
+echo "🚀 Starting deployment..."
+
+# Navigate to app directory
+cd /var/www/trive/trive-sca
+
+# Pull latest code
+echo "📥 Pulling latest code..."
+git pull origin main
+
+# Install dependencies
+echo "📦 Installing dependencies..."
+npm install
+
+# Build application
+echo "🔨 Building application..."
+npm run build
+
+# Restart application
+echo "🔄 Restarting application..."
+if command -v pm2 &> /dev/null; then
+    pm2 restart trive-sca || pm2 start npm --name "trive-sca" -- start
+    pm2 save
+elif systemctl is-active --quiet trive-sca.service; then
+    sudo systemctl restart trive-sca
+else
+    echo "⚠️  No process manager detected. Please restart manually."
+fi
+
+echo "✅ Deployment complete!"
+```
+
+**Set permission dan gunakan:**
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+#### Checklist Sebelum Deploy:
+
+- ✅ Pastikan file `.env` sudah ada dan berisi konfigurasi yang benar
+- ✅ Pastikan database sudah di-initialize (`npm run init-db`)
+- ✅ Pastikan port aplikasi tidak conflict dengan service lain
+- ✅ Pastikan firewall sudah allow port aplikasi (biasanya 3000 untuk Next.js)
+- ✅ Backup database jika ada data penting
+
+#### Troubleshooting Deploy:
+
+**Error: Port already in use**
+```bash
+# Cek proses yang menggunakan port
+sudo lsof -i :3000
+# Kill proses jika perlu
+sudo kill -9 <PID>
+```
+
+**Error: Cannot find module**
+```bash
+# Hapus node_modules dan reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Error: Build failed**
+```bash
+# Clear Next.js cache
+rm -rf .next
+npm run build
+```
+
 ## Troubleshooting
 
 ### Error: Connection Timeout

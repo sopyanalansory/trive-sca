@@ -52,9 +52,17 @@ export async function POST(request: NextRequest) {
     // For now, we'll just log it. In production, you should send via SMS service
     console.log(`Verification code for ${fullPhoneNumber}: ${code}`);
     
-    // In development, you might want to return the code for testing
-    // In production, remove this and only send via SMS
-    if (process.env.NODE_ENV === 'development') {
+    // Check if we should return code for testing
+    // Support NODE_ENV=development or SHOW_VERIFICATION_CODE=true
+    // Note: NODE_ENV in Next.js can be 'production', 'development', or 'test'
+    const isDevelopment = process.env.NODE_ENV === 'development' || 
+                         process.env.SHOW_VERIFICATION_CODE === 'true' ||
+                         process.env.SHOW_VERIFICATION_CODE === '1';
+    
+    // In development, return the code for testing
+    // In production, only send via SMS (code won't be returned)
+    if (isDevelopment) {
+      console.log(`[DEV] Verification code returned in response for ${fullPhoneNumber}`);
       return NextResponse.json(
         {
           message: 'Kode verifikasi telah dikirim',
