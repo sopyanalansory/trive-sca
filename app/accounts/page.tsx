@@ -5,12 +5,78 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+// Interface untuk data slider dari API
+interface SlideData {
+  images: string[]; // Array of 3 image URLs
+  badge?: {
+    text: string;
+    bgColor: string;
+    textColor: string;
+  };
+}
+
 export default function AccountsPage() {
   const [activeTab, setActiveTab] = useState("live");
   const [selectedAccount, setSelectedAccount] = useState("Semua akun live");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileHovered, setProfileHovered] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
   const router = useRouter();
+
+  // Data slider - nanti akan diisi dari API
+  const [slidesData, setSlidesData] = useState<SlideData[]>([
+    {
+      images: [
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+      ],
+      badge: {
+        text: "10 hari lagi",
+        bgColor: "bg-yellow-400",
+        textColor: "text-black",
+      },
+    },
+    {
+      images: [
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+      ],
+      badge: {
+        text: "Berakhir",
+        bgColor: "bg-gray-400",
+        textColor: "text-white",
+      },
+    },
+    {
+      images: [
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+      ],
+      badge: {
+        text: "Berakhir",
+        bgColor: "bg-gray-400",
+        textColor: "text-white",
+      },
+    },
+  ]);
+
+  // TODO: Fetch slides data from API
+  // useEffect(() => {
+  //   const fetchSlides = async () => {
+  //     try {
+  //       const response = await fetch('/api/slides');
+  //       const data = await response.json();
+  //       setSlidesData(data);
+  //     } catch (error) {
+  //       console.error('Error fetching slides:', error);
+  //     }
+  //   };
+  //   fetchSlides();
+  // }, []);
 
   // Check if user has token, redirect to login if not
   useEffect(() => {
@@ -460,7 +526,7 @@ export default function AccountsPage() {
       </button>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col w-full lg:w-auto">
+      <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden">
         {/* Top Banner */}
         <div className="bg-[#cdf0f7] px-4 lg:px-8 py-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
           <p className="text-black text-sm text-left">
@@ -472,14 +538,15 @@ export default function AccountsPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 p-4 lg:p-8">
+        <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
           {/* Breadcrumb */}
           <div className="mb-4">
             <p className="text-sm text-gray-600">Dasbor / Akun</p>
           </div>
 
           {/* Page Title */}
-          <div className="flex items-center gap-2 mb-4 lg:mb-6">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div className="flex items-center gap-2">
             <h1 className="text-2xl lg:text-3xl font-semibold text-black">Akun</h1>
             <svg
               className="w-6 h-6 text-gray-600"
@@ -500,37 +567,41 @@ export default function AccountsPage() {
                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
               />
             </svg>
+            </div>
+            <select
+              value={selectedAccount}
+              onChange={(e) => setSelectedAccount(e.target.value)}
+              className="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-[#69d7f6] w-[300px]"
+            >
+              <option>Semua akun live</option>
+            </select>
           </div>
 
+          {/* Financial Summary Cards & Account Actions */}
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 mb-6">
           {/* Financial Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+              <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#69d7f6]"></div>
               <p className="text-sm text-gray-600 mb-2">Ekuitas bersih</p>
               <p className="text-2xl font-semibold text-black">$0.00</p>
             </div>
-            <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm">
+              <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-400"></div>
               <p className="text-sm text-gray-600 mb-2">Keuntungan dan kerugian harian</p>
               <p className="text-2xl font-semibold text-black">$0.00</p>
             </div>
-            <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm">
+              <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400"></div>
               <p className="text-sm text-gray-600 mb-2">Total uang tunai yang tersedia untuk investasi</p>
               <p className="text-2xl font-semibold text-black">$0.00</p>
             </div>
           </div>
 
           {/* Account Actions */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-start gap-4 mb-6">
-            <div className="flex-1 w-full">
-              <select
-                value={selectedAccount}
-                onChange={(e) => setSelectedAccount(e.target.value)}
-                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-[#69d7f6]"
-              >
-                <option>Semua akun live</option>
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-              <button className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-black hover:bg-gray-50 transition-colors">
+            <div className="flex flex-col gap-3">
+              <button className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]">
+                <span>Transfer</span>
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -544,9 +615,12 @@ export default function AccountsPage() {
                     d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                   />
                 </svg>
-                Transfer
               </button>
-              <button className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-black hover:bg-gray-50 transition-colors">
+              <button 
+                onClick={() => setDepositModalOpen(true)}
+                className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]"
+              >
+                <span>Deposit</span>
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -560,9 +634,9 @@ export default function AccountsPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Deposit
               </button>
-              <button className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-black hover:bg-gray-50 transition-colors">
+              <button className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]">
+                <span>Withdrawal</span>
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -576,89 +650,133 @@ export default function AccountsPage() {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                Withdrawal
               </button>
             </div>
           </div>
 
           {/* Promotional Banners Carousel */}
-          <div className="mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Banner 1 */}
-              <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative">
-                <div className="absolute top-4 right-4 bg-yellow-400 text-black text-xs px-2 py-1 rounded">
-                  374 hari lagi
-                </div>
-                <div className="mb-4">
-                  <Image
-                    src="/logo.svg"
-                    alt="Trive Invest"
-                    width={120}
-                    height={40}
-                    className="h-auto"
-                  />
-                </div>
-                <h3 className="text-lg font-semibold text-black mb-2">
-                  Dapatkan Kembali Biaya Komisi saat Anda Melakukan Deposit.
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Trading forex tanpa komisi dengan deposit $1 untuk 1 lot komisi kembali.
-                </p>
-                <button className="bg-[#69d7f6] text-[#2b2c24] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#5bc7e6] transition-colors">
-                  Deposit Sekarang
-                </button>
-              </div>
-
-              {/* Banner 2 */}
-              <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative">
-                <div className="absolute top-4 right-4 bg-yellow-400 text-black text-xs px-2 py-1 rounded">
-                  24 hari lagi
-                </div>
-                <div className="mb-4">
-                  <Image
-                    src="/logo.svg"
-                    alt="Trive Invest"
-                    width={120}
-                    height={40}
-                    className="h-auto"
-                  />
-                </div>
-                <h3 className="text-lg font-semibold text-black mb-2">
-                  Ajukan Perubahan Leverage Tinggi dengan Berbagai Pilihan Auto-Cut
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Pilih leverage dan auto-cut yang sesuai dengan kebutuhan trading Anda.
-                </p>
-              </div>
-
-              {/* Banner 3 */}
-              <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative">
-                <div className="absolute top-4 right-4 bg-yellow-400 text-black text-xs px-2 py-1 rounded">
-                  9 hari lagi
-                </div>
-                <div className="mb-4">
-                  <Image
-                    src="/logo.svg"
-                    alt="Trive Invest"
-                    width={120}
-                    height={40}
-                    className="h-auto"
-                  />
-                </div>
-                <h3 className="text-lg font-semibold text-black mb-2">
-                  Fleksibilitas Trading di Akun Bebas Swap
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Bandingkan keuntungan akun swap dan akun bebas swap.
-                </p>
-                <button className="bg-[#69d7f6] text-[#2b2c24] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#5bc7e6] transition-colors">
-                  Aktifkan Akun Bebas Swap
-                </button>
+          <div className="mb-6 relative">
+            <div className="relative overflow-hidden w-full rounded-lg">
+              {/* Carousel Container */}
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: `translateX(-${currentSlide * 100}%)`
+                }}
+              >
+                {slidesData.map((slide, slideIndex) => (
+                  <div 
+                    key={slideIndex} 
+                    className="w-full shrink-0 bg-white rounded-lg shadow-sm relative"
+                    style={{ minWidth: '100%' }}
+                  >
+                    <div className="p-4 lg:p-6">
+                      {slide.badge && (
+                        <div className={`absolute top-4 right-4 ${slide.badge.bgColor} ${slide.badge.textColor} text-xs px-2 py-1 rounded font-medium z-10`}>
+                          {slide.badge.text}
+                    </div>
+                      )}
+                      <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 justify-center items-center mt-6 lg:mt-0">
+                        {slide.images && slide.images.length > 0 ? (
+                          <>
+                            {/* Mobile: Hanya tampilkan gambar pertama */}
+                            <div className="shrink-0 w-full max-w-sm lg:hidden">
+                              <img
+                                src={slide.images[0]}
+                                alt={`Slide ${slideIndex + 1} - Image 1`}
+                          className="w-full h-40 md:h-52 rounded-lg object-cover"
+                        />
+                      </div>
+                            {/* Desktop: Tampilkan semua 3 gambar */}
+                            {slide.images.map((imageUrl, imageIndex) => (
+                              <div key={imageIndex} className="hidden lg:block shrink-0 w-full max-w-sm lg:w-1/3">
+                        <img
+                                  src={imageUrl}
+                                  alt={`Slide ${slideIndex + 1} - Image ${imageIndex + 1}`}
+                          className="w-full h-40 md:h-52 object-cover"
+                        />
+                      </div>
+                            ))}
+                          </>
+                        ) : (
+                          <div className="text-gray-400 text-sm">No images available</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* Navigation Arrows */}
+            {slidesData.length > 1 && (
+              <>
+            <button
+                  onClick={() => setCurrentSlide((prev) => (prev === 0 ? slidesData.length - 1 : prev - 1))}
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
+              aria-label="Previous slide"
+            >
+              <svg
+                className="w-6 h-6 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+                  onClick={() => setCurrentSlide((prev) => (prev === slidesData.length - 1 ? 0 : prev + 1))}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
+              aria-label="Next slide"
+            >
+              <svg
+                className="w-6 h-6 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+              </>
+            )}
+
+            {/* Dots Indicator */}
+            {slidesData.length > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+                {slidesData.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    currentSlide === index ? "bg-[#69d7f6]" : "bg-gray-300"
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+            )}
           </div>
 
-          {/* Account List Section */}
+          {/* Daftar akun Section */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-black">Daftar akun</h2>
+              <button className="bg-[#2b2c24] text-white px-4 lg:px-6 py-2 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors whitespace-nowrap">
+                Buka Akun
+              </button>
+            </div>
           <div className="bg-white rounded-lg shadow-sm">
             <div className="border-b border-gray-200">
               <div className="flex">
@@ -685,10 +803,56 @@ export default function AccountsPage() {
               </div>
             </div>
             <div className="p-6">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
                 <p className="text-sm text-yellow-800">
-                  Akun Anda tidak memiliki data karena belum ada deposit yang
-                </p>
+                    Akun Anda tidak memiliki data karena belum ada deposit yang dilakukan.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Riwayat Section */}
+          <div>
+            <h2 className="text-lg font-semibold text-black mb-4">Riwayat</h2>
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="p-4 lg:p-6">
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm text-yellow-800">
+                      Akun Anda tidak memiliki data karena belum ada deposit yang dilakukan.{" "}
+                      <button className="underline font-medium hover:text-yellow-900">
+                        Buka Akun Live
+                      </button>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -725,6 +889,217 @@ export default function AccountsPage() {
           Buka Akun
         </button>
       </div> */}
+
+      {/* Deposit Modal */}
+      {depositModalOpen && (
+        <>
+          {/* Overlay */}
+          <div 
+            className="fixed inset-0 z-50 lg:block"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+            onClick={() => setDepositModalOpen(false)}
+          />
+          {/* Modal - Desktop: dari kanan, Mobile: center */}
+          <div className="fixed inset-0 z-50 flex items-center justify-end lg:justify-end p-0 pointer-events-none">
+            <div 
+              className="bg-white shadow-xl w-full lg:w-[800px] h-full lg:h-full overflow-y-auto pointer-events-auto transform transition-transform duration-300 ease-out"
+              onClick={(e) => e.stopPropagation()}
+            >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-black">Deposit</h2>
+              <button
+                onClick={() => setDepositModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                aria-label="Close modal"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Bank Details (Read-only) */}
+                <div className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="border-b border-gray-200 pb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nomor Referensi Pembayaran
+                      </label>
+                      <div className="relative flex items-center justify-between">
+                        <p className="text-sm text-gray-500">-</p>
+                        <button
+                          className="text-gray-500 hover:text-gray-700"
+                          aria-label="Copy"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="border-b border-gray-200 pb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nama Bank
+                      </label>
+                      <p className="text-sm text-gray-500">-</p>
+                    </div>
+                    <div className="border-b border-gray-200 pb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cabang/Kantor
+                      </label>
+                      <p className="text-sm text-gray-500">-</p>
+                    </div>
+                    <div className="border-b border-gray-200 pb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nama akun
+                      </label>
+                      <p className="text-sm text-gray-500">-</p>
+                    </div>
+                    <div className="border-b border-gray-200 pb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nomor Rekening
+                      </label>
+                      <p className="text-sm text-gray-500">-</p>
+                    </div>
+                    <div className="border-b border-gray-200 pb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Kode Swift
+                      </label>
+                      <p className="text-sm text-gray-500">-</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Deposit Details */}
+                <div className="space-y-4">
+                  <div className="bg-gray-100 rounded-lg p-4">
+                    <p className="text-sm text-gray-700">
+                      Saat mentransfer dana melalui Transfer Bank, Anda WAJIB menuliskan Nomor Rekening Anda sebagai referensi.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Akun Trading
+                    </label>
+                    <div className="relative">
+                      <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
+                        <option>Pilih Akun Trading</option>
+                      </select>
+                      <svg
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Rekening Bank Terpisah untuk Deposit
+                    </label>
+                    <div className="relative">
+                      <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
+                        <option>Pilih Rekening Bank</option>
+                      </select>
+                      <svg
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mata uang
+                    </label>
+                    <div className="relative">
+                      <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
+                        <option>Pilih Mata Uang</option>
+                      </select>
+                      <svg
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Jumlah
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
+                      placeholder="Jumlah"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Penjelasan
+                    </label>
+                    <textarea
+                      rows={4}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 resize-none"
+                      placeholder="Penjelasan"
+                    />
+                  </div>
+                  <button className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors">
+                    Kirim
+                  </button>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
