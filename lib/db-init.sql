@@ -45,3 +45,32 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Create market_updates table
+CREATE TABLE IF NOT EXISTS market_updates (
+  id SERIAL PRIMARY KEY,
+  research_type VARCHAR(100) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'Draft',
+  title VARCHAR(500) NOT NULL,
+  summary TEXT,
+  img_url VARCHAR(1000),
+  economic_data_1 TEXT,
+  economic_data_2 TEXT,
+  economic_data_3 TEXT,
+  economic_data_4 TEXT,
+  economic_data_5 TEXT,
+  created_by VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for market_updates
+CREATE INDEX IF NOT EXISTS idx_market_updates_status ON market_updates(status);
+CREATE INDEX IF NOT EXISTS idx_market_updates_research_type ON market_updates(research_type);
+CREATE INDEX IF NOT EXISTS idx_market_updates_created_at ON market_updates(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_market_updates_created_by ON market_updates(created_by);
+
+-- Trigger to automatically update updated_at for market_updates
+DROP TRIGGER IF EXISTS update_market_updates_updated_at ON market_updates;
+CREATE TRIGGER update_market_updates_updated_at BEFORE UPDATE ON market_updates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
