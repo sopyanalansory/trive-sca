@@ -5,7 +5,34 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// GET - Get single market update by ID
+// Basic Auth credentials (should be in environment variables for production)
+const BASIC_AUTH_USERNAME = process.env.MARKET_UPDATES_USERNAME || 'admin';
+const BASIC_AUTH_PASSWORD = process.env.MARKET_UPDATES_PASSWORD || 'trive2024!';
+
+// Helper function to verify Basic Auth
+function verifyBasicAuth(request: NextRequest): { success: boolean; error?: string } {
+  const authHeader = request.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return { success: false, error: 'Authorization header tidak ditemukan.' };
+  }
+  
+  try {
+    const base64Credentials = authHeader.substring(6); // Remove 'Basic ' prefix
+    const credentials = atob(base64Credentials);
+    const [username, password] = credentials.split(':');
+    
+    if (username === BASIC_AUTH_USERNAME && password === BASIC_AUTH_PASSWORD) {
+      return { success: true };
+    }
+    
+    return { success: false, error: 'Username atau password salah.' };
+  } catch {
+    return { success: false, error: 'Format credentials tidak valid.' };
+  }
+}
+
+// GET - Get single market update by ID (PUBLIC)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -59,9 +86,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT - Update market update by ID
+// PUT - Update market update by ID (REQUIRES BASIC AUTH)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    // Verify Basic Auth
+    const auth = verifyBasicAuth(request);
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Market Updates API"' } }
+      );
+    }
+
     const { id } = await params;
     const marketUpdateId = parseInt(id);
 
@@ -246,9 +282,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE - Delete market update by ID
+// DELETE - Delete market update by ID (REQUIRES BASIC AUTH)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    // Verify Basic Auth
+    const auth = verifyBasicAuth(request);
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Market Updates API"' } }
+      );
+    }
+
     const { id } = await params;
     const marketUpdateId = parseInt(id);
 

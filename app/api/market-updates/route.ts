@@ -1,7 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-// GET - List all market updates with pagination, filtering, and sorting
+// Basic Auth credentials (should be in environment variables for production)
+const BASIC_AUTH_USERNAME = process.env.MARKET_UPDATES_USERNAME || 'admin';
+const BASIC_AUTH_PASSWORD = process.env.MARKET_UPDATES_PASSWORD || 'trive2024!';
+
+// Helper function to verify Basic Auth
+function verifyBasicAuth(request: NextRequest): { success: boolean; error?: string } {
+  const authHeader = request.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return { success: false, error: 'Authorization header tidak ditemukan.' };
+  }
+  
+  try {
+    const base64Credentials = authHeader.substring(6); // Remove 'Basic ' prefix
+    const credentials = atob(base64Credentials);
+    const [username, password] = credentials.split(':');
+    
+    if (username === BASIC_AUTH_USERNAME && password === BASIC_AUTH_PASSWORD) {
+      return { success: true };
+    }
+    
+    return { success: false, error: 'Username atau password salah.' };
+  } catch {
+    return { success: false, error: 'Format credentials tidak valid.' };
+  }
+}
+
+// GET - List all market updates with pagination, filtering, and sorting (PUBLIC)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -125,9 +152,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new market update
+// POST - Create a new market update (REQUIRES BASIC AUTH)
 export async function POST(request: NextRequest) {
   try {
+    // Verify Basic Auth
+    const auth = verifyBasicAuth(request);
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Market Updates API"' } }
+      );
+    }
+
     const body = await request.json();
     const { 
       research_type, 
