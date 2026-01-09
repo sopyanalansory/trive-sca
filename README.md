@@ -54,3 +54,33 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 3. **That's it!** Your app will be live in seconds.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Setup HTTPS/SSL
+
+Untuk mengaktifkan HTTPS dengan sertifikat SSL pada server:
+
+- **Quick Start:** Lihat [HTTPS_QUICK_START.md](./HTTPS_QUICK_START.md) untuk panduan cepat
+- **Full Guide:** Lihat [HTTPS_SETUP.md](./HTTPS_SETUP.md) untuk dokumentasi lengkap
+
+### Opsi Setup:
+
+1. **Let's Encrypt (Recommended)** - Sertifikat gratis dengan domain name
+2. **Self-Signed Certificate** - Untuk testing tanpa domain (browser akan warning)
+3. **Cloudflare** - Paling mudah jika punya domain, gratis SSL + CDN
+
+### Quick Commands:
+
+```bash
+# With domain (Let's Encrypt)
+sudo ./scripts/setup-nginx-letsencrypt.sh
+
+# Without domain (Self-Signed)
+sudo ./scripts/setup-ssl-selfsigned.sh
+```
+
+## Documentation
+
+- [Backend Setup](./BACKEND_SETUP.md) - Setup database dan API
+- [Production Setup](./PRODUCTION_SETUP.md) - Konfigurasi production
+- [HTTPS Setup](./HTTPS_SETUP.md) - Setup HTTPS dengan SSL certificate
+- [HTTPS Quick Start](./HTTPS_QUICK_START.md) - Quick reference untuk HTTPS
