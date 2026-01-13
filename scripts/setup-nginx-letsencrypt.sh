@@ -21,7 +21,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Configuration
-NGINX_SITE="trive-sca"
+NGINX_SITE="trive"
 DOMAIN=""
 EMAIL=""
 
@@ -91,9 +91,21 @@ NGINX_CONFIG="/etc/nginx/sites-available/$NGINX_SITE"
 cat > "$NGINX_CONFIG" <<EOF
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    server_name $DOMAIN;
 
     location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    location /api/ {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -138,13 +150,13 @@ read -p "DNS configured and propagated? (y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}⚠️  Setup DNS first, then run Certbot manually:${NC}"
-    echo "  sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN"
+    echo "  sudo certbot --nginx -d $DOMAIN"
     exit 0
 fi
 
 # Generate SSL certificate with Certbot
 echo "🔐 Generating SSL certificate with Let's Encrypt..."
-certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive
+certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive
 
 # Setup auto-renewal
 echo "🔄 Setting up auto-renewal..."
@@ -160,11 +172,11 @@ echo -e "${GREEN}✅ Setup completed successfully!${NC}"
 echo ""
 echo "Your site should now be accessible at:"
 echo "  https://$DOMAIN"
-echo "  https://www.$DOMAIN"
 echo ""
 echo "Certificate will auto-renew every 90 days."
 echo ""
 echo "Test your site:"
 echo "  curl -I https://$DOMAIN"
+echo "  curl https://$DOMAIN/api/market-updates"
 echo "  openssl s_client -connect $DOMAIN:443 -servername $DOMAIN"
 

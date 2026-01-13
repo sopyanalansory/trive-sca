@@ -190,22 +190,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate research_type
-    const validResearchTypes = [
-      'Daily Analysis/Strategy',
-      'Trading Signal (Trading Central)',
-      'Technical Sentiment (TradingView)',
-    ];
+    // // Validate research_type
+    // const validResearchTypes = [
+    //   'Daily Analysis/Strategy',
+    //   'Trading Signal (Trading Central)',
+    //   'Technical Sentiment (TradingView)',
+    // ];
     
-    if (!validResearchTypes.includes(research_type)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Research type tidak valid. Pilihan: ${validResearchTypes.join(', ')}` 
-        },
-        { status: 400 }
-      );
-    }
+    // if (!validResearchTypes.includes(research_type)) {
+    //   return NextResponse.json(
+    //     { 
+    //       success: false, 
+    //       error: `Research type tidak valid. Pilihan: ${validResearchTypes.join(', ')}` 
+    //     },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Validate status
     const validStatuses = ['Draft', 'Published', 'Archived'];
