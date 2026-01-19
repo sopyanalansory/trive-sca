@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { buildApiUrl } from "@/lib/api-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -120,7 +121,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(buildApiUrl("/api/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

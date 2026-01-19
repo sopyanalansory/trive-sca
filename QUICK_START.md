@@ -19,12 +19,17 @@ Buat file `.env.local` di root project:
 DATABASE_URL=postgresql://postgres:password@localhost:5432/trive_db
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 NODE_ENV=development
+NEXT_PUBLIC_API_BASE_URL= # kosongkan untuk pakai host yang sama, isi dengan https://api.domainmu.com untuk production
+NEXT_PUBLIC_USE_API_PROXY=false # set true jika mau proxy untuk hindari CORS
+API_PROXY_TARGET= # wajib diisi jika NEXT_PUBLIC_USE_API_PROXY=true, contoh https://api.domainmu.com
 ```
 
 **Ganti:**
 - `postgres` dengan username PostgreSQL Anda
 - `password` dengan password PostgreSQL Anda
 - `localhost:5432` jika menggunakan konfigurasi berbeda
+- `NEXT_PUBLIC_API_BASE_URL` jika API dipisah dari host frontend (biarkan kosong untuk pakai API lokal/relative)
+- Aktifkan proxy (set `NEXT_PUBLIC_USE_API_PROXY=true` dan `API_PROXY_TARGET=https://api.domainmu.com`) jika backend tidak mengizinkan CORS; semua request akan diarahkan lewat Next.js `/api/proxy/*`
 
 ### 4. Initialize Database
 ```bash

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { buildApiUrl } from "@/lib/api-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -260,7 +261,7 @@ export default function RegisterPage() {
     setIsSendingCode(true);
     
     try {
-      const response = await fetch("/api/auth/send-verification-code", {
+      const response = await fetch(buildApiUrl("/api/auth/send-verification-code"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -332,7 +333,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch(buildApiUrl("/api/auth/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
