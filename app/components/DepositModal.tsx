@@ -57,7 +57,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                       Nomor Referensi Pembayaran
                     </label>
                     <div className="relative flex items-center justify-between">
-                      <p className="text-sm text-white">-</p>
+                      <p className="text-sm text-gray-700">-</p>
                       <button
                         className="text-gray-500 hover:text-gray-700"
                         aria-label="Copy"
@@ -82,31 +82,31 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nama Bank
                     </label>
-                    <p className="text-sm text-white">-</p>
+                    <p className="text-sm text-gray-700">-</p>
                   </div>
                   <div className="border-b border-gray-200 pb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Cabang/Kantor
                     </label>
-                    <p className="text-sm text-white">-</p>
+                    <p className="text-sm text-gray-700">-</p>
                   </div>
                   <div className="border-b border-gray-200 pb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nama akun
                     </label>
-                    <p className="text-sm text-white">-</p>
+                    <p className="text-sm text-gray-700">-</p>
                   </div>
                   <div className="border-b border-gray-200 pb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nomor Rekening
                     </label>
-                    <p className="text-sm text-white">-</p>
+                    <p className="text-sm text-gray-700">-</p>
                   </div>
                   <div className="border-b border-gray-200 pb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Kode Swift
                     </label>
-                    <p className="text-sm text-white">-</p>
+                    <p className="text-sm text-gray-700">-</p>
                   </div>
                 </div>
               </div>
