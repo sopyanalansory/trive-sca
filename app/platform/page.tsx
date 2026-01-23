@@ -4,10 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { buildApiUrl } from "@/lib/api-client";
 
 export default function PlatformPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileHovered, setProfileHovered] = useState(false);
+  const [userName, setUserName] = useState<string>("");
+  const [userInitial, setUserInitial] = useState<string>("M");
   const router = useRouter();
 
   // Check if user has token, redirect to login if not
@@ -15,8 +18,42 @@ export default function PlatformPage() {
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/login");
+    } else {
+      // Fetch user data
+      fetchUserData(token);
     }
   }, [router]);
+
+  // Fetch user data from API
+  const fetchUserData = async (token: string) => {
+    try {
+      const response = await fetch(buildApiUrl("/api/auth/me"), {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user && data.user.name) {
+          setUserName(data.user.name.toUpperCase());
+          // Get first letter of name for initial
+          const initial = data.user.name.charAt(0).toUpperCase();
+          setUserInitial(initial);
+        }
+      } else {
+        // If token is invalid, redirect to login
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   // Set initial sidebar state based on screen size
   useEffect(() => {
@@ -90,11 +127,11 @@ export default function PlatformPage() {
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#464857] flex items-center justify-center text-white font-semibold shrink-0">
-              M
+              {userInitial}
             </div>
             {sidebarOpen && (
               <div>
-                <p className="text-white text-sm font-medium">MOHAMMAD SOPYAN</p>
+                <p className="text-white text-sm font-medium">{userName || "Loading..."}</p>
               </div>
             )}
           </div>
