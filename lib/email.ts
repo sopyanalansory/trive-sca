@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Email recipient for deposit and withdrawal notifications
-const NOTIFICATION_EMAIL = "Mohammad.Sopyan@triveinvest.co.id";
+const NOTIFICATION_EMAIL = "dealing@triveinvest.co.id";
 
 interface DepositEmailData {
   userId: number;
