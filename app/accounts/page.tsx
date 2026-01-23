@@ -924,7 +924,8 @@ export default function AccountsPage() {
                           <td className="py-3 px-4 text-sm text-gray-900">{account.accountType}</td>
                           <td className="py-3 px-4 text-sm text-gray-900">{account.platform}</td>
                           <td className="py-3 px-4 text-sm text-gray-900">{account.login}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900">{account.serverName}</td>
+                          {/* <td className="py-3 px-4 text-sm text-gray-900">{account.serverName}</td> */}
+                          <td className="py-3 px-4 text-sm text-gray-900">TriveInvest-MT5-Live</td>
                           <td className="py-3 px-4">
                             <button
                               onClick={() => handleResetPassword(account.id)}
