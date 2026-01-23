@@ -75,23 +75,19 @@ export async function sendDepositNotificationEmail(data: DepositEmailData) {
             <p>Ada request deposit baru yang perlu ditinjau:</p>
             
             <div class="info-row">
-              <span class="label">Request ID:</span>
-              <span class="value">#${data.requestId}</span>
+              <span class="label">Nama:</span>
+              <span class="value">${data.userName}</span>
             </div>
-            
-            <div class="info-row">
-              <span class="label">User:</span>
+
+             <div class="info-row">
+              <span class="label">Email:</span>
               <span class="value">${data.userName} (${data.userEmail})</span>
             </div>
             
-            <div class="info-row">
-              <span class="label">User ID:</span>
-              <span class="value">${data.userId}</span>
-            </div>
             
             <div class="info-row">
               <span class="label">Akun Trading:</span>
-              <span class="value">${data.loginNumber} (Platform ID: ${data.platformId})</span>
+              <span class="value">${data.loginNumber}</span>
             </div>
             
             <div class="info-row">
@@ -201,24 +197,20 @@ export async function sendWithdrawalNotificationEmail(data: WithdrawalEmailData)
           <div class="content">
             <p>Ada request withdrawal baru yang perlu ditinjau:</p>
             
+            
             <div class="info-row">
-              <span class="label">Request ID:</span>
-              <span class="value">#${data.requestId}</span>
+              <span class="label">Nama:</span>
+              <span class="value">${data.userName}</span>
             </div>
             
             <div class="info-row">
-              <span class="label">User:</span>
-              <span class="value">${data.userName} (${data.userEmail})</span>
-            </div>
-            
-            <div class="info-row">
-              <span class="label">User ID:</span>
-              <span class="value">${data.userId}</span>
+              <span class="label">Email:</span>
+              <span class="value">${data.userEmail}</span>
             </div>
             
             <div class="info-row">
               <span class="label">Dari Akun:</span>
-              <span class="value">${data.loginNumber} (Platform ID: ${data.platformId})</span>
+              <span class="value">${data.loginNumber}</span>
             </div>
             
             <div class="info-row">
