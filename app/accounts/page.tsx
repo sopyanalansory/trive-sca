@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import DepositModal from "../components/DepositModal";
+import WithdrawalModal from "../components/WithdrawalModal";
 
 // Interface untuk data slider dari API
 interface SlideData {
@@ -22,44 +24,21 @@ export default function AccountsPage() {
   const [profileHovered, setProfileHovered] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
   const router = useRouter();
 
   // Data slider - nanti akan diisi dari API
   const [slidesData, setSlidesData] = useState<SlideData[]>([
     {
       images: [
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
+        "/slider/SCA-KomisiKembali.jpg",
+        "/slider/SCA-Spreadback.jpg",
+        "/slider/SCA-Swap.jpg",
       ],
       badge: {
         text: "10 hari lagi",
         bgColor: "bg-yellow-400",
         textColor: "text-black",
-      },
-    },
-    {
-      images: [
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-      ],
-      badge: {
-        text: "Berakhir",
-        bgColor: "bg-gray-400",
-        textColor: "text-white",
-      },
-    },
-    {
-      images: [
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-        "https://cdn2.triveinvest.co.id/assets/img/landing-page/leverage_dan_auto-cut.png",
-      ],
-      badge: {
-        text: "Berakhir",
-        bgColor: "bg-gray-400",
-        textColor: "text-white",
       },
     },
   ]);
@@ -213,9 +192,8 @@ export default function AccountsPage() {
               </Link>
             </li>
             <li>
-              <Link
-                href="/research"
-                className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} p-3 rounded-lg text-gray-300 hover:bg-[#334155] hover:text-white transition-colors`}
+              <span
+                className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} p-3 rounded-lg text-gray-300 cursor-default opacity-75`}
               >
                 <div className="flex items-center gap-3">
                   <svg
@@ -235,22 +213,7 @@ export default function AccountsPage() {
                     <span className="text-sm font-medium">Riset</span>
                   )}
                 </div>
-                {sidebarOpen && (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                )}
-              </Link>
+              </span>
             </li>
             <li>
               <Link
@@ -293,9 +256,8 @@ export default function AccountsPage() {
               </Link>
             </li>
             <li>
-              <Link
-                href="/partnership"
-                className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} p-3 rounded-lg text-gray-300 hover:bg-[#334155] hover:text-white transition-colors`}
+              <span
+                className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} p-3 rounded-lg text-gray-300 cursor-default opacity-75`}
               >
                 <div className="flex items-center gap-3">
                   <svg
@@ -315,27 +277,11 @@ export default function AccountsPage() {
                     <span className="text-sm font-medium">Partnership</span>
                   )}
                 </div>
-                {sidebarOpen && (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                )}
-              </Link>
+              </span>
             </li>
             <li>
-              <Link
-                href="/program"
-                className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} p-3 rounded-lg text-gray-300 hover:bg-[#334155] hover:text-white transition-colors`}
+              <span
+                className={`flex items-center ${sidebarOpen ? "justify-between" : "justify-center"} p-3 rounded-lg text-gray-300 cursor-default opacity-75`}
               >
                 <div className="flex items-center gap-3">
                   <svg
@@ -355,22 +301,7 @@ export default function AccountsPage() {
                     <span className="text-sm font-medium">Program</span>
                   )}
                 </div>
-                {sidebarOpen && (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                )}
-              </Link>
+              </span>
             </li>
           </ul>
         </nav>
@@ -422,29 +353,41 @@ export default function AccountsPage() {
               {/* Akun Section */}
               <div className="px-4 mb-4">
                 <p className="text-sm font-semibold text-black mb-2">Akun</p>
-                <Link
+                {/* <Link
                   href="/accounts"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
                 >
                   Akun
-                </Link>
-                <Link
+                </Link> */}
+                <span
+                  className="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed opacity-50 rounded"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  Akun
+                </span>
+                {/* <Link
                   href="/profile"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
                 >
                   Profil
-                </Link>
+                </Link> */}
+                <span
+                  className="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed opacity-50 rounded"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  Profil
+                </span>
               </div>
 
               {/* Bahasa Section */}
               <div className="px-4 mb-4">
                 <p className="text-sm font-semibold text-black mb-2">Bahasa</p>
-                <Link
-                  href="/language"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                <span
+                  className="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed opacity-50 rounded"
+                  onClick={(e) => e.preventDefault()}
                 >
                   Bahasa
-                </Link>
+                </span>
               </div>
 
               {/* Mode Gelap Toggle */}
@@ -528,14 +471,14 @@ export default function AccountsPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden">
         {/* Top Banner */}
-        <div className="bg-[#cdf0f7] px-4 lg:px-8 py-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+        {/* <div className="bg-[#cdf0f7] px-4 lg:px-8 py-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
           <p className="text-black text-sm text-left">
             Anda belum memiliki akun live. Hanya butuh beberapa menit untuk membuat akun live. Mulai trading dengan Trive Invest.
           </p>
           <button className="bg-[#2b2c24] text-white px-4 lg:px-6 py-2 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors whitespace-nowrap">
             Buka Akun Live
           </button>
-        </div>
+        </div> */}
 
         {/* Content Area */}
         <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
@@ -568,13 +511,13 @@ export default function AccountsPage() {
               />
             </svg>
             </div>
-            <select
+            {/* <select
               value={selectedAccount}
               onChange={(e) => setSelectedAccount(e.target.value)}
               className="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-[#69d7f6] w-[300px]"
             >
               <option>Semua akun live</option>
-            </select>
+            </select> */}
           </div>
 
           {/* Financial Summary Cards & Account Actions */}
@@ -600,7 +543,7 @@ export default function AccountsPage() {
 
           {/* Account Actions */}
             <div className="flex flex-col gap-3">
-              <button className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]">
+              {/* <button className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]">
                 <span>Transfer</span>
                 <svg
                   className="w-5 h-5"
@@ -615,10 +558,10 @@ export default function AccountsPage() {
                     d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                   />
                 </svg>
-              </button>
+              </button> */}
               <button 
                 onClick={() => setDepositModalOpen(true)}
-                className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]"
+                className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-full lg:w-[300px]"
               >
                 <span>Deposit</span>
                 <svg
@@ -635,7 +578,9 @@ export default function AccountsPage() {
                   />
                 </svg>
               </button>
-              <button className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-[300px]">
+              <button 
+                onClick={() => setWithdrawalModalOpen(true)}
+                className="flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black hover:bg-black hover:text-white transition-colors w-full lg:w-[300px]">
                 <span>Withdrawal</span>
                 <svg
                   className="w-5 h-5"
@@ -657,7 +602,6 @@ export default function AccountsPage() {
           {/* Promotional Banners Carousel */}
           <div className="mb-6 relative">
             <div className="relative overflow-hidden w-full rounded-lg">
-              {/* Carousel Container */}
               <div 
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ 
@@ -671,15 +615,14 @@ export default function AccountsPage() {
                     style={{ minWidth: '100%' }}
                   >
                     <div className="p-4 lg:p-6">
-                      {slide.badge && (
+                      {/* {slide.badge && (
                         <div className={`absolute top-4 right-4 ${slide.badge.bgColor} ${slide.badge.textColor} text-xs px-2 py-1 rounded font-medium z-10`}>
                           {slide.badge.text}
                     </div>
-                      )}
+                      )} */}
                       <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 justify-center items-center mt-6 lg:mt-0">
                         {slide.images && slide.images.length > 0 ? (
                           <>
-                            {/* Mobile: Hanya tampilkan gambar pertama */}
                             <div className="shrink-0 w-full max-w-sm lg:hidden">
                               <img
                                 src={slide.images[0]}
@@ -687,7 +630,6 @@ export default function AccountsPage() {
                           className="w-full h-40 md:h-52 rounded-lg object-cover"
                         />
                       </div>
-                            {/* Desktop: Tampilkan semua 3 gambar */}
                             {slide.images.map((imageUrl, imageIndex) => (
                               <div key={imageIndex} className="hidden lg:block shrink-0 w-full max-w-sm lg:w-1/3">
                         <img
@@ -708,7 +650,6 @@ export default function AccountsPage() {
               </div>
             </div>
 
-            {/* Navigation Arrows */}
             {slidesData.length > 1 && (
               <>
             <button
@@ -752,7 +693,6 @@ export default function AccountsPage() {
               </>
             )}
 
-            {/* Dots Indicator */}
             {slidesData.length > 1 && (
             <div className="flex justify-center gap-2 mt-4">
                 {slidesData.map((_, index) => (
@@ -773,9 +713,9 @@ export default function AccountsPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-black">Daftar akun</h2>
-              <button className="bg-[#2b2c24] text-white px-4 lg:px-6 py-2 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors whitespace-nowrap">
+              {/* <button className="bg-[#2b2c24] text-white px-4 lg:px-6 py-2 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors whitespace-nowrap">
                 Buka Akun
-              </button>
+              </button> */}
             </div>
           <div className="bg-white rounded-lg shadow-sm">
             <div className="border-b border-gray-200">
@@ -826,7 +766,7 @@ export default function AccountsPage() {
           </div>
 
           {/* Riwayat Section */}
-          <div>
+          {/* <div>
             <h2 className="text-lg font-semibold text-black mb-4">Riwayat</h2>
             <div className="bg-white rounded-lg shadow-sm">
               <div className="p-4 lg:p-6">
@@ -855,7 +795,7 @@ export default function AccountsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </main>
 
@@ -891,215 +831,17 @@ export default function AccountsPage() {
       </div> */}
 
       {/* Deposit Modal */}
-      {depositModalOpen && (
-        <>
-          {/* Overlay */}
-          <div 
-            className="fixed inset-0 z-50 lg:block"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
-            onClick={() => setDepositModalOpen(false)}
-          />
-          {/* Modal - Desktop: dari kanan, Mobile: center */}
-          <div className="fixed inset-0 z-50 flex items-center justify-end lg:justify-end p-0 pointer-events-none">
-            <div 
-              className="bg-white shadow-xl w-full lg:w-[800px] h-full lg:h-full overflow-y-auto pointer-events-auto transform transition-transform duration-300 ease-out"
-              onClick={(e) => e.stopPropagation()}
-            >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-black">Deposit</h2>
-              <button
-                onClick={() => setDepositModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-                aria-label="Close modal"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+      <DepositModal
+        isOpen={depositModalOpen}
+        onClose={() => setDepositModalOpen(false)}
+      />
 
-            {/* Modal Content */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column - Bank Details (Read-only) */}
-                <div className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="border-b border-gray-200 pb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nomor Referensi Pembayaran
-                      </label>
-                      <div className="relative flex items-center justify-between">
-                        <p className="text-sm text-gray-500">-</p>
-                        <button
-                          className="text-gray-500 hover:text-gray-700"
-                          aria-label="Copy"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="border-b border-gray-200 pb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nama Bank
-                      </label>
-                      <p className="text-sm text-gray-500">-</p>
-                    </div>
-                    <div className="border-b border-gray-200 pb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cabang/Kantor
-                      </label>
-                      <p className="text-sm text-gray-500">-</p>
-                    </div>
-                    <div className="border-b border-gray-200 pb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nama akun
-                      </label>
-                      <p className="text-sm text-gray-500">-</p>
-                    </div>
-                    <div className="border-b border-gray-200 pb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nomor Rekening
-                      </label>
-                      <p className="text-sm text-gray-500">-</p>
-                    </div>
-                    <div className="border-b border-gray-200 pb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Kode Swift
-                      </label>
-                      <p className="text-sm text-gray-500">-</p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Right Column - Deposit Details */}
-                <div className="space-y-4">
-                  <div className="bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-700">
-                      Saat mentransfer dana melalui Transfer Bank, Anda WAJIB menuliskan Nomor Rekening Anda sebagai referensi.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Akun Trading
-                    </label>
-                    <div className="relative">
-                      <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
-                        <option>Pilih Akun Trading</option>
-                      </select>
-                      <svg
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rekening Bank Terpisah untuk Deposit
-                    </label>
-                    <div className="relative">
-                      <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
-                        <option>Pilih Rekening Bank</option>
-                      </select>
-                      <svg
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Mata uang
-                    </label>
-                    <div className="relative">
-                      <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
-                        <option>Pilih Mata Uang</option>
-                      </select>
-                      <svg
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Jumlah
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
-                      placeholder="Jumlah"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Penjelasan
-                    </label>
-                    <textarea
-                      rows={4}
-                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 resize-none"
-                      placeholder="Penjelasan"
-                    />
-                  </div>
-                  <button className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors">
-                    Kirim
-                  </button>
-                </div>
-              </div>
-            </div>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Withdrawal Modal */}
+      <WithdrawalModal
+        isOpen={withdrawalModalOpen}
+        onClose={() => setWithdrawalModalOpen(false)}
+      />
     </div>
   );
 }
