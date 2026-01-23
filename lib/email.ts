@@ -326,18 +326,13 @@ export async function sendResetPasswordNotificationEmail(data: ResetPasswordEmai
             <p>Ada request reset password untuk akun trading berikut:</p>
             
             <div class="info-row">
-              <span class="label">Nama User:</span>
+              <span class="label">Nama:</span>
               <span class="value">${data.userName}</span>
             </div>
 
             <div class="info-row">
-              <span class="label">Email User:</span>
+              <span class="label">Email:</span>
               <span class="value">${data.userEmail}</span>
-            </div>
-            
-            <div class="info-row">
-              <span class="label">User ID:</span>
-              <span class="value">${data.userId}</span>
             </div>
             
             <div class="info-row">

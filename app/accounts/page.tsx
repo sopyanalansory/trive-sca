@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { buildApiUrl } from "@/lib/api-client";
 import DepositModal from "../components/DepositModal";
 import WithdrawalModal from "../components/WithdrawalModal";
+import NotificationModal from "../components/NotificationModal";
 
 // Interface untuk data slider dari API
 interface SlideData {
@@ -31,6 +32,17 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<number | null>(null);
+  const [notificationModal, setNotificationModal] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
   const router = useRouter();
 
   // Data slider - nanti akan diisi dari API
@@ -161,14 +173,29 @@ export default function AccountsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        alert("Request reset password berhasil dikirim ke email notification");
+        setNotificationModal({
+          isOpen: true,
+          type: "success",
+          title: "Berhasil",
+          message: "Request reset password berhasil dikirim ke email notification",
+        });
       } else {
         const errorData = await response.json();
-        alert(errorData.error || "Gagal mengirim request reset password");
+        setNotificationModal({
+          isOpen: true,
+          type: "error",
+          title: "Gagal",
+          message: errorData.error || "Gagal mengirim request reset password",
+        });
       }
     } catch (error) {
       console.error("Error resetting password:", error);
-      alert("Terjadi kesalahan saat mengirim request reset password");
+      setNotificationModal({
+        isOpen: true,
+        type: "error",
+        title: "Gagal",
+        message: "Terjadi kesalahan saat mengirim request reset password",
+      });
     } finally {
       setResettingPassword(null);
     }
@@ -993,6 +1020,15 @@ export default function AccountsPage() {
       <WithdrawalModal
         isOpen={withdrawalModalOpen}
         onClose={() => setWithdrawalModalOpen(false)}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal({ ...notificationModal, isOpen: false })}
+        type={notificationModal.type}
+        title={notificationModal.title}
+        message={notificationModal.message}
       />
     </div>
   );
