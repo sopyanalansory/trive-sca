@@ -9,7 +9,8 @@
     "lint": "eslint",
     "init-db": "tsx lib/db-init.ts",
     "generate-jwt-secret": "node scripts/generate-jwt-secret.js",
-    "test-prod-db": "node scripts/test-production-db.js"
+    "test-prod-db": "node scripts/test-production-db.js",
+    "import-users": "tsx scripts/import-users-from-csv.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
