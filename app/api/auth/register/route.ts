@@ -214,23 +214,8 @@ export async function POST(request: NextRequest) {
         code: verificationCode,
       });
       
-      // Provide more specific error messages based on error type
-      if (verihubsError.message?.includes('fetch')) {
-        return NextResponse.json(
-          { error: 'Gagal terhubung ke server verifikasi. Silakan coba lagi.' },
-          { status: 503 }
-        );
-      }
-      
-      if (verihubsError.message?.includes('timeout')) {
-        return NextResponse.json(
-          { error: 'Waktu verifikasi habis. Silakan coba lagi.' },
-          { status: 504 }
-        );
-      }
-      
       return NextResponse.json(
-        { error: 'Gagal memverifikasi kode verifikasi. Silakan coba lagi.' },
+        { error: verihubsError.message || 'Gagal memverifikasi kode verifikasi. Silakan coba lagi.' },
         { status: 500 }
       );
     }
