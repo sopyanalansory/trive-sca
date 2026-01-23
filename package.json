@@ -10,7 +10,8 @@
     "init-db": "tsx lib/db-init.ts",
     "generate-jwt-secret": "node scripts/generate-jwt-secret.js",
     "test-prod-db": "node scripts/test-production-db.js",
-    "import-users": "tsx scripts/import-users-from-csv.ts"
+    "import-users": "tsx scripts/import-users-from-csv.ts",
+    "import-platforms": "tsx scripts/import-platforms-from-csv.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
