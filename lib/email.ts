@@ -287,3 +287,128 @@ Email ini dikirim otomatis dari sistem Trive Invest
     return { success: false, error: error.message };
   }
 }
+
+interface ResetPasswordEmailData {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  platformId: number;
+  loginNumber: string;
+  serverName: string;
+  accountType?: string;
+}
+
+export async function sendResetPasswordNotificationEmail(data: ResetPasswordEmailData) {
+  try {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #69d7f6; color: white; padding: 20px; text-align: center; }
+          .content { background-color: #f9f9f9; padding: 20px; }
+          .info-row { margin: 10px 0; padding: 10px; background-color: white; border-left: 3px solid #69d7f6; }
+          .label { font-weight: bold; color: #555; }
+          .value { color: #333; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          .button { display: inline-block; padding: 12px 24px; background-color: #69d7f6; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Request Reset Password</h2>
+          </div>
+          <div class="content">
+            <p>Ada request reset password untuk akun trading berikut:</p>
+            
+            <div class="info-row">
+              <span class="label">Nama User:</span>
+              <span class="value">${data.userName}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">Email User:</span>
+              <span class="value">${data.userEmail}</span>
+            </div>
+            
+            <div class="info-row">
+              <span class="label">User ID:</span>
+              <span class="value">${data.userId}</span>
+            </div>
+            
+            <div class="info-row">
+              <span class="label">Login Number:</span>
+              <span class="value">${data.loginNumber}</span>
+            </div>
+            
+            <div class="info-row">
+              <span class="label">Server Name:</span>
+              <span class="value">${data.serverName}</span>
+            </div>
+            
+            ${data.accountType ? `
+            <div class="info-row">
+              <span class="label">Account Type:</span>
+              <span class="value">${data.accountType}</span>
+            </div>
+            ` : ''}
+            
+            <div class="info-row">
+              <span class="label">Platform ID:</span>
+              <span class="value">${data.platformId}</span>
+            </div>
+            
+            <div class="info-row">
+              <span class="label">Waktu Request:</span>
+              <span class="value">${new Date().toLocaleString('id-ID', { 
+                dateStyle: 'full', 
+                timeStyle: 'medium' 
+              })}</span>
+            </div>
+          </div>
+          <div class="footer">
+            <p>Email ini dikirim otomatis dari sistem Trive Invest</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `
+Request Reset Password
+
+Ada request reset password untuk akun trading berikut:
+
+User: ${data.userName} (${data.userEmail})
+User ID: ${data.userId}
+Login Number: ${data.loginNumber}
+Server Name: ${data.serverName}
+${data.accountType ? `Account Type: ${data.accountType}` : ''}
+Platform ID: ${data.platformId}
+Waktu Request: ${new Date().toLocaleString('id-ID', { 
+  dateStyle: 'full', 
+  timeStyle: 'medium' 
+})}
+
+Email ini dikirim otomatis dari sistem Trive Invest
+    `;
+
+    const info = await transporter.sendMail({
+      from: '"No-reply Trive Invest" <no-reply@triveinvest.co.id>',
+      to: NOTIFICATION_EMAIL,
+      subject: `[Reset Password Request] ${data.userName} - Login: ${data.loginNumber}`,
+      text: textContent,
+      html: htmlContent,
+    });
+
+    console.log("Reset password notification email sent:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Error sending reset password notification email:", error);
+    return { success: false, error: error.message };
+  }
+}

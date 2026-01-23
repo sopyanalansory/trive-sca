@@ -28,6 +28,9 @@ export default function AccountsPage() {
   const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
   const [userInitial, setUserInitial] = useState<string>("M");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState<number | null>(null);
   const router = useRouter();
 
   // Data slider - nanti akan diisi dari API
@@ -68,8 +71,15 @@ export default function AccountsPage() {
     } else {
       // Fetch user data
       fetchUserData(token);
+      // Fetch accounts
+      fetchAccounts();
     }
   }, [router]);
+
+  // Refetch accounts when tab changes
+  useEffect(() => {
+    fetchAccounts();
+  }, [activeTab]);
 
   // Fetch user data from API
   const fetchUserData = async (token: string) => {
@@ -99,6 +109,68 @@ export default function AccountsPage() {
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
+    }
+  };
+
+  // Fetch accounts from API
+  const fetchAccounts = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setLoadingAccounts(true);
+    try {
+      const response = await fetch(buildApiUrl("/api/accounts"), {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data.accounts || []);
+      } else {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  // Handle reset password
+  const handleResetPassword = async (platformId: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setResettingPassword(platformId);
+    try {
+      const response = await fetch(buildApiUrl("/api/accounts/reset-password"), {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ platformId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert("Request reset password berhasil dikirim ke email notification");
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Gagal mengirim request reset password");
+      }
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      alert("Terjadi kesalahan saat mengirim request reset password");
+    } finally {
+      setResettingPassword(null);
     }
   };
 
@@ -784,6 +856,11 @@ export default function AccountsPage() {
               </div>
             </div>
             <div className="p-6">
+              {loadingAccounts ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-gray-600">Memuat data...</p>
+                </div>
+              ) : accounts.length === 0 ? (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 flex items-start gap-3">
                   <svg
                     className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
@@ -798,11 +875,45 @@ export default function AccountsPage() {
                       d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                     />
                   </svg>
-                <p className="text-sm text-yellow-800">
+                  <p className="text-sm text-yellow-800">
                     Akun Anda tidak memiliki data karena belum ada deposit yang dilakukan.
                   </p>
                 </div>
-              </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Account Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Platform</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Login</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">ServerName</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accounts.map((account) => (
+                        <tr key={account.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4 text-sm text-gray-900">{account.accountType}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900">{account.platform}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900">{account.login}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900">{account.serverName}</td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => handleResetPassword(account.id)}
+                              disabled={resettingPassword === account.id}
+                              className="px-3 py-1.5 text-xs font-medium text-white bg-[#69d7f6] rounded hover:bg-[#5bc7e6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {resettingPassword === account.id ? "Mengirim..." : "Reset Password"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
             </div>
           </div>
 
