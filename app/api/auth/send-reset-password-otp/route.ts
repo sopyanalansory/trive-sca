@@ -5,55 +5,83 @@ const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5q
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
 const VERIHUBS_API_URL = 'https://api.verihubs.com/v2/whatsapp/otp';
 
+// Normalize phone number from database (handle 0062, 62, 0, etc.)
+function normalizePhoneForVerihubs(phone: string, countryCode: string): string {
+  // Remove all non-digit characters
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Remove country code variations (0062, 62)
+  if (cleaned.startsWith('0062')) {
+    cleaned = cleaned.substring(4);
+  } else if (cleaned.startsWith('62')) {
+    cleaned = cleaned.substring(2);
+  }
+  
+  // Remove leading zero
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // Get country code digits (remove +)
+  const countryCodeDigits = countryCode.replace('+', '');
+  
+  // Combine: country code + normalized phone
+  return countryCodeDigits + cleaned;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, countryCode } = body;
+    const { email } = body;
 
-    if (!phone || !countryCode) {
+    if (!email) {
       return NextResponse.json(
-        { error: 'Nomor telepon dan kode negara wajib diisi' },
+        { error: 'Email wajib diisi' },
         { status: 400 }
       );
     }
 
-    // Normalize phone number
-    const normalizePhoneNumber = (phoneNumber: string): string => {
-      let cleaned = phoneNumber.replace(/\D/g, '');
-      if (cleaned.startsWith('0')) {
-        cleaned = cleaned.substring(1);
-      } else if (cleaned.startsWith('62')) {
-        cleaned = cleaned.substring(2);
-      }
-      return cleaned;
-    };
-
-    const normalizedPhone = normalizePhoneNumber(phone);
-    const fullPhoneNumber = countryCode.replace('+', '') + normalizedPhone;
-
-    // Validate phone length
-    if (normalizedPhone.length < 9 || normalizedPhone.length > 13) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Nomor telepon tidak valid. Mohon masukkan nomor yang benar.' },
+        { error: 'Format email tidak valid' },
         { status: 400 }
       );
     }
 
-    // Check if user exists by phone number
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user exists and get phone number from database
     const userCheck = await pool.query(
-      'SELECT id, email, phone, country_code FROM users WHERE phone = $1 AND country_code = $2',
-      [normalizedPhone, countryCode]
+      'SELECT id, email, phone, country_code FROM users WHERE email = $1',
+      [normalizedEmail]
     );
 
     if (userCheck.rows.length === 0) {
-      // Don't reveal if phone exists or not for security
+      // Don't reveal if email exists or not for security
       return NextResponse.json(
-        { message: 'Jika nomor telepon terdaftar, kode OTP akan dikirim ke WhatsApp Anda.' },
+        { message: 'Jika email terdaftar, kode OTP akan dikirim ke WhatsApp Anda.' },
         { status: 200 }
       );
     }
 
     const user = userCheck.rows[0];
+    const phoneFromDb = user.phone;
+    const countryCodeFromDb = user.country_code || '+62';
+
+    // Normalize phone number from database for Verihubs
+    const msisdn = normalizePhoneForVerihubs(phoneFromDb, countryCodeFromDb);
+
+    // Validate normalized phone length
+    const phoneWithoutCountryCode = msisdn.replace(/^62/, '');
+    if (phoneWithoutCountryCode.length < 9 || phoneWithoutCountryCode.length > 13) {
+      console.error(`Invalid phone length after normalization: ${phoneWithoutCountryCode.length} for phone: ${phoneFromDb}`);
+      return NextResponse.json(
+        { error: 'Nomor telepon tidak valid. Silakan hubungi customer service.' },
+        { status: 400 }
+      );
+    }
 
     // Send OTP via Verihubs
     try {
@@ -66,7 +94,7 @@ export async function POST(request: NextRequest) {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          msisdn: fullPhoneNumber,
+          msisdn: msisdn,
           lang_code: 'id',
           template_name: 'trive_invest_wba',
           callback_url: process.env.VERIHUBS_CALLBACK_URL || 'https://google.com',
@@ -91,11 +119,11 @@ export async function POST(request: NextRequest) {
       await pool.query(
         `INSERT INTO verification_codes (phone, code, expires_at)
          VALUES ($1, $2, $3)`,
-        [fullPhoneNumber, 'VERIHUBS', expiresAt] // Store 'VERIHUBS' as code to indicate it's managed by Verihubs
+        [msisdn, 'VERIHUBS', expiresAt] // Store 'VERIHUBS' as code to indicate it's managed by Verihubs
       );
 
       // For development, return success message
-      // In production, don't reveal if phone exists
+      // In production, don't reveal if email exists
       return NextResponse.json(
         {
           message: 'Kode OTP telah dikirim ke WhatsApp Anda',

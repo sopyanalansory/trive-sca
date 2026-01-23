@@ -9,9 +9,8 @@ import { buildApiUrl } from "@/lib/api-client";
 export default function ForgotPasswordPage() {
   const router = useRouter();
   
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [countryCode, setCountryCode] = useState("+62");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,32 +20,21 @@ export default function ForgotPasswordPage() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [otpError, setOtpError] = useState("");
 
-  // Normalisasi nomor HP: hapus 0 di depan atau 62/+62
-  const normalizePhoneNumber = (phoneNumber: string): string => {
-    let cleaned = phoneNumber.replace(/\D/g, "");
-    if (cleaned.startsWith("0")) {
-      cleaned = cleaned.substring(1);
-    } else if (cleaned.startsWith("62")) {
-      cleaned = cleaned.substring(2);
-    }
-    return cleaned;
-  };
-
-  const validatePhone = (phoneValue: string): boolean => {
-    const normalized = normalizePhoneNumber(phoneValue);
-    if (!normalized || normalized.trim() === "") {
-      setPhoneError("Nomor telepon diperlukan");
+  const validateEmail = (emailValue: string): boolean => {
+    if (!emailValue.trim()) {
+      setEmailError("Email diperlukan");
       return false;
     }
-    if (normalized.length < 9 || normalized.length > 13) {
-      setPhoneError("Nomor telepon harus 9-13 digit");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailValue)) {
+      setEmailError("Email tidak valid");
       return false;
     }
-    setPhoneError("");
+    setEmailError("");
     return true;
   };
 
@@ -74,7 +62,7 @@ export default function ForgotPasswordPage() {
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validatePhone(phone)) {
+    if (!validateEmail(email)) {
       return;
     }
 
@@ -89,8 +77,7 @@ export default function ForgotPasswordPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          phone: phone.trim(),
-          countryCode: countryCode,
+          email: email.trim(),
         }),
       });
 
@@ -148,8 +135,7 @@ export default function ForgotPasswordPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          phone: phone.trim(),
-          countryCode: countryCode,
+          email: email.trim(),
           otp: otp.trim(),
           newPassword: newPassword,
         }),
@@ -214,51 +200,37 @@ export default function ForgotPasswordPage() {
               {/* Forgot Password Form Card */}
               <div className="bg-[#ffffffb3] px-[60px] py-[77px] rounded-lg shadow-lg relative z-10">
                 <h2 className="text-4xl font-medium text-black mb-6">
-                  {step === "phone" ? "Lupa Kata Sandi" : "Reset Kata Sandi"}
+                  {step === "email" ? "Lupa Kata Sandi" : "Reset Kata Sandi"}
                 </h2>
 
-                {step === "phone" ? (
+                {step === "email" ? (
                   <form onSubmit={handleSendOtp} className="space-y-4">
                     <p className="text-sm text-[#666666] mb-4">
-                      Masukkan nomor WhatsApp Anda. Kami akan mengirim kode OTP ke WhatsApp Anda.
+                      Masukkan email Anda. Kami akan mengirim kode OTP ke WhatsApp Anda.
                     </p>
 
-                    {/* Phone Field with Country Code */}
-                    <div className="flex gap-2">
-                      <div className="w-[120px]">
-                        <select
-                          id="countryCode"
-                          name="countryCode"
-                          value={countryCode}
-                          onChange={(e) => setCountryCode(e.target.value)}
-                          className="w-full bg-white border border-white rounded-[70px] shadow-none text-[#24252c] text-xs sm:text-sm h-[53px] pl-7 sm:pl-10 pr-5 sm:pr-8 pb-0 outline-none focus:outline-none appearance-none cursor-pointer"
-                        >
-                          <option value="+62">+62</option>
-                        </select>
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          type="tel"
-                          id="phone"
-                          name="phone"
-                          value={phone}
-                          onChange={(e) => {
-                            const numericValue = e.target.value.replace(/\D/g, "");
-                            setPhone(numericValue);
-                            setPhoneError("");
-                            setError("");
-                          }}
-                          onBlur={() => validatePhone(phone)}
-                          placeholder="Nomor WhatsApp"
-                          className={`w-full bg-white border rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none ${
-                            phoneError ? "border-red-500" : "border-white"
-                          }`}
-                          required
-                        />
-                        {phoneError && (
-                          <p className="text-red-500 text-xs mt-1 ml-2">{phoneError}</p>
-                        )}
-                      </div>
+                    {/* Email Field */}
+                    <div>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          setEmailError("");
+                          setError("");
+                        }}
+                        onBlur={() => validateEmail(email)}
+                        placeholder="Email"
+                        className={`w-full bg-white border rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none ${
+                          emailError ? "border-red-500" : "border-white"
+                        }`}
+                        required
+                      />
+                      {emailError && (
+                        <p className="text-red-500 text-xs mt-1 ml-2">{emailError}</p>
+                      )}
                     </div>
 
                     {error && (
@@ -300,24 +272,14 @@ export default function ForgotPasswordPage() {
                       Masukkan kode OTP yang dikirim ke WhatsApp Anda dan password baru.
                     </p>
 
-                    {/* Phone (read-only) */}
-                    <div className="flex gap-2">
-                      <div className="w-[120px]">
-                        <input
-                          type="text"
-                          value={countryCode}
-                          disabled
-                          className="w-full bg-gray-100 border border-gray-300 rounded-[70px] shadow-none text-[#24252c] text-xs sm:text-sm h-[53px] pl-7 sm:pl-10 pr-5 sm:pr-8 pb-0 outline-none cursor-not-allowed"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          type="tel"
-                          value={phone}
-                          disabled
-                          className="w-full bg-gray-100 border border-gray-300 rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none cursor-not-allowed"
-                        />
-                      </div>
+                    {/* Email (read-only) */}
+                    <div>
+                      <input
+                        type="email"
+                        value={email}
+                        disabled
+                        className="w-full bg-gray-100 border border-gray-300 rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none placeholder:text-[#9ca3af] cursor-not-allowed"
+                      />
                     </div>
 
                     {/* OTP Field */}
@@ -487,12 +449,12 @@ export default function ForgotPasswordPage() {
                       </button>
                     </div>
 
-                    {/* Back to phone step */}
+                    {/* Back to email step */}
                     <div className="text-center text-sm text-[#666666] pt-1">
                       <button
                         type="button"
                         onClick={() => {
-                          setStep("phone");
+                          setStep("email");
                           setOtp("");
                           setNewPassword("");
                           setConfirmPassword("");

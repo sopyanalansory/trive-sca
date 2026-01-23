@@ -6,36 +6,47 @@ const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5q
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
 const VERIHUBS_API_URL = 'https://api.verihubs.com/v2/whatsapp/otp';
 
+// Normalize phone number from database (handle 0062, 62, 0, etc.)
+function normalizePhoneForVerihubs(phone: string, countryCode: string): string {
+  // Remove all non-digit characters
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Remove country code variations (0062, 62)
+  if (cleaned.startsWith('0062')) {
+    cleaned = cleaned.substring(4);
+  } else if (cleaned.startsWith('62')) {
+    cleaned = cleaned.substring(2);
+  }
+  
+  // Remove leading zero
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // Get country code digits (remove +)
+  const countryCodeDigits = countryCode.replace('+', '');
+  
+  // Combine: country code + normalized phone
+  return countryCodeDigits + cleaned;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, countryCode, otp, newPassword } = body;
+    const { email, otp, newPassword } = body;
 
-    if (!phone || !countryCode || !otp || !newPassword) {
+    if (!email || !otp || !newPassword) {
       return NextResponse.json(
-        { error: 'Nomor telepon, kode negara, OTP, dan password baru wajib diisi' },
+        { error: 'Email, OTP, dan password baru wajib diisi' },
         { status: 400 }
       );
     }
 
-    // Normalize phone number
-    const normalizePhoneNumber = (phoneNumber: string): string => {
-      let cleaned = phoneNumber.replace(/\D/g, '');
-      if (cleaned.startsWith('0')) {
-        cleaned = cleaned.substring(1);
-      } else if (cleaned.startsWith('62')) {
-        cleaned = cleaned.substring(2);
-      }
-      return cleaned;
-    };
-
-    const normalizedPhone = normalizePhoneNumber(phone);
-    const fullPhoneNumber = countryCode.replace('+', '') + normalizedPhone;
-
-    // Validate phone length
-    if (normalizedPhone.length < 9 || normalizedPhone.length > 13) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Nomor telepon tidak valid. Mohon masukkan nomor yang benar.' },
+        { error: 'Format email tidak valid' },
         { status: 400 }
       );
     }
@@ -59,20 +70,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user exists by phone number
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user exists and get phone number from database
     const userCheck = await pool.query(
-      'SELECT id, email, phone, country_code FROM users WHERE phone = $1 AND country_code = $2',
-      [normalizedPhone, countryCode]
+      'SELECT id, email, phone, country_code FROM users WHERE email = $1',
+      [normalizedEmail]
     );
 
     if (userCheck.rows.length === 0) {
       return NextResponse.json(
-        { error: 'Nomor telepon tidak terdaftar' },
+        { error: 'Email tidak terdaftar' },
         { status: 404 }
       );
     }
 
     const user = userCheck.rows[0];
+    const phoneFromDb = user.phone;
+    const countryCodeFromDb = user.country_code || '+62';
+
+    // Normalize phone number from database for Verihubs
+    const msisdn = normalizePhoneForVerihubs(phoneFromDb, countryCodeFromDb);
 
     // Verify OTP via Verihubs
     try {
@@ -85,7 +103,7 @@ export async function POST(request: NextRequest) {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          msisdn: fullPhoneNumber,
+          msisdn: msisdn,
           otp: otp,
         }),
       });
@@ -107,7 +125,7 @@ export async function POST(request: NextRequest) {
          WHERE phone = $1 AND verified = false 
          ORDER BY created_at DESC 
          LIMIT 1`,
-        [fullPhoneNumber]
+        [msisdn]
       );
 
       // Hash new password

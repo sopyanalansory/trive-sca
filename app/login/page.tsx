@@ -363,14 +363,14 @@ export default function LoginPage() {
                 )}
 
                 {/* Forgot Password - Desktop: kiri, Mobile: hidden (ada di baris Ingat saya) */}
-                <div className="hidden sm:flex justify-start mb-4">
+                {/* <div className="hidden sm:flex justify-start mb-4">
                   <Link
                     href="/forgot-password"
                     className="text-sm text-[#2563eb] hover:text-[#1d4ed8] font-medium underline transition-colors"
                   >
                     Lupa Kata Sandi
                   </Link>
-                </div>
+                </div> */}
 
                 {/* Remember Me & Submit Button - Sejajar di desktop, terpisah di mobile */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-0">
