@@ -72,19 +72,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if phone already exists
-    const phoneCheck = await pool.query(
-      'SELECT id FROM users WHERE phone = $1',
-      [normalizedPhone]
-    );
-
-    if (phoneCheck.rows.length > 0) {
-      return NextResponse.json(
-        { error: 'Nomor telepon sudah terdaftar' },
-        { status: 409 }
-      );
-    }
-
     // Verify OTP via Verihubs
     try {
       const verifyPayload = {
@@ -231,12 +218,6 @@ export async function POST(request: NextRequest) {
       if (error.constraint === 'users_email_key') {
         return NextResponse.json(
           { error: 'Email sudah terdaftar' },
-          { status: 409 }
-        );
-      }
-      if (error.constraint === 'users_phone_key') {
-        return NextResponse.json(
-          { error: 'Nomor telepon sudah terdaftar' },
           { status: 409 }
         );
       }
