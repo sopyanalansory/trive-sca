@@ -136,7 +136,8 @@ async function importUsers() {
     console.log('Starting CSV import...');
     
     // Read CSV file
-    const csvPath = resolve(process.cwd(), 'csv', 'Import Account.csv');
+    // const csvPath = resolve(process.cwd(), 'csv', 'Import Account.csv');
+    const csvPath = resolve(process.cwd(), 'csv', 'account_rendy.csv');
     const csvContent = readFileSync(csvPath, 'utf-8');
     
     // Parse CSV
