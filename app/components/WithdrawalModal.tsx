@@ -48,32 +48,46 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
   }, [isOpen]);
 
   const formatCurrency = (value: string): string => {
-    // Remove all non-digit characters except decimal point
-    const numericValue = value.replace(/[^\d.]/g, '');
+    // Remove all non-digit characters except comma (for decimal)
+    let cleaned = value.replace(/[^\d,]/g, '');
+    
+    // Replace comma with dot for processing
+    cleaned = cleaned.replace(',', '.');
     
     // Split by decimal point
-    const parts = numericValue.split('.');
+    const parts = cleaned.split('.');
     
-    // Format the integer part with thousand separators
-    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    // Get integer part and remove leading zeros
+    let integerPart = parts[0].replace(/^0+/, '') || '0';
     
-    // Combine with decimal part if exists
-    return parts.length > 1 ? `${integerPart},${parts[1].slice(0, 2)}` : integerPart;
+    // Format the integer part with thousand separators (dot)
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    // Handle decimal part (max 2 digits)
+    if (parts.length > 1) {
+      const decimalPart = parts[1].slice(0, 2);
+      return `${integerPart},${decimalPart}`;
+    }
+    
+    return integerPart;
   };
 
   const parseCurrency = (value: string): number => {
-    // Remove thousand separators and replace comma with dot for decimal
+    // Remove thousand separators (dots) and replace comma with dot for decimal
     const numericString = value.replace(/\./g, '').replace(',', '.');
-    return parseFloat(numericString) || 0;
+    const parsed = parseFloat(numericString);
+    return isNaN(parsed) ? 0 : parsed;
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
+    
     // Allow empty string
     if (inputValue === '') {
       setAmount('');
       return;
     }
+    
     // Format the display value
     const formatted = formatCurrency(inputValue);
     setAmount(formatted);
