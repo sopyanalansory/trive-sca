@@ -353,11 +353,6 @@ export async function sendResetPasswordNotificationEmail(data: ResetPasswordEmai
             ` : ''}
             
             <div class="info-row">
-              <span class="label">Platform ID:</span>
-              <span class="value">${data.platformId}</span>
-            </div>
-            
-            <div class="info-row">
               <span class="label">Waktu Request:</span>
               <span class="value">${new Date().toLocaleString('id-ID', { 
                 dateStyle: 'full', 
