@@ -99,7 +99,7 @@ async function importPlatforms() {
     console.log('Starting platform CSV import...');
     
     // Read CSV file
-    const csvPath = resolve(process.cwd(), 'csv', 'Import Platform.csv');
+    const csvPath = resolve(process.cwd(), 'csv', 'platform_rendy.csv');
     const csvContent = readFileSync(csvPath, 'utf-8');
     
     // Parse CSV
