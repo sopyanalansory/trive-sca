@@ -217,22 +217,6 @@ async function importUsers() {
           // Update existing user
           const userId = existingUser.rows[0].id;
           
-          // Check if phone needs updating
-          const existingPhone = existingUser.rows[0].phone;
-          if (existingPhone !== phone) {
-            // Check if new phone is already taken
-            const phoneCheck = await pool.query(
-              'SELECT id FROM users WHERE phone = $1 AND id != $2',
-              [phone, userId]
-            );
-            
-            if (phoneCheck.rows.length > 0) {
-              errors.push(`Row ${i + 2}: Phone ${phone} already exists for another user`);
-              errorCount++;
-              continue;
-            }
-          }
-          
           // Build update query with additional fields if available
           let updateFields = ['name = $1', 'phone = $2', 'updated_at = CURRENT_TIMESTAMP'];
           let updateValues: any[] = [name, phone];
@@ -274,18 +258,6 @@ async function importUsers() {
           console.log(`Updated user: ${email} (ID: ${userId})`);
           successCount++;
         } else {
-          // Check if phone is already taken
-          const phoneCheck = await pool.query(
-            'SELECT id FROM users WHERE phone = $1',
-            [phone]
-          );
-          
-          if (phoneCheck.rows.length > 0) {
-            errors.push(`Row ${i + 2}: Phone ${phone} already exists for user ${phoneCheck.rows[0].id}`);
-            errorCount++;
-            continue;
-          }
-          
           // Build insert query with additional fields if available
           let insertFields = ['name', 'email', 'phone', 'country_code', 'password_hash', 
                               'marketing_consent', 'terms_consent', 'email_verified', 'phone_verified'];
