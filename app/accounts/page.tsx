@@ -922,10 +922,10 @@ export default function AccountsPage() {
                       {accounts.map((account) => (
                         <tr key={account.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4 text-sm text-gray-900">{account.accountType}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900">{account.platform}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900">{account.login}</td>
-                          {/* <td className="py-3 px-4 text-sm text-gray-900">{account.serverName}</td> */}
+                          {/* <td className="py-3 px-4 text-sm text-gray-900">{account.platform}</td> */}
                           <td className="py-3 px-4 text-sm text-gray-900">TriveInvest-MT5-Live</td>
+                          <td className="py-3 px-4 text-sm text-gray-900">{account.login}</td>
+                          <td className="py-3 px-4 text-sm text-gray-900">{account.serverName}</td>
                           <td className="py-3 px-4">
                             <button
                               onClick={() => handleResetPassword(account.id)}
