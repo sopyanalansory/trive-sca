@@ -25,6 +25,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
   const [selectedBank, setSelectedBank] = useState<string>("");
+  const [customBankName, setCustomBankName] = useState<string>("");
   const [selectedCurrency, setSelectedCurrency] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -39,6 +40,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
       // Reset form when modal opens
       setSelectedPlatform("");
       setSelectedBank("");
+      setCustomBankName("");
       setSelectedCurrency("");
       setAmount("");
       setDescription("");
@@ -134,6 +136,10 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
       setError("Pilih Bank untuk transfer");
       return;
     }
+    if (selectedBank === "Lainnya" && !customBankName.trim()) {
+      setError("Masukkan nama bank");
+      return;
+    }
     if (!selectedCurrency) {
       setError("Pilih Mata Uang");
       return;
@@ -160,7 +166,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
         },
         body: JSON.stringify({
           platformId: parseInt(selectedPlatform),
-          bankName: selectedBank,
+          bankName: selectedBank === "Lainnya" ? customBankName.trim() : selectedBank,
           currency: selectedCurrency,
           amount: parseCurrency(amount),
           description: description || null,
@@ -174,6 +180,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
         // Reset form
         setSelectedPlatform("");
         setSelectedBank("");
+        setCustomBankName("");
         setSelectedCurrency("");
         setAmount("");
         setDescription("");
@@ -354,7 +361,12 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   <div className="relative">
                     <select 
                       value={selectedBank}
-                      onChange={(e) => setSelectedBank(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedBank(e.target.value);
+                        if (e.target.value !== "Lainnya") {
+                          setCustomBankName("");
+                        }
+                      }}
                       className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
                     >
                       <option value="">Pilih Rekening Bank</option>
@@ -362,6 +374,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                       <option value="Mandiri">Mandiri</option>
                       <option value="BNI">BNI</option>
                       <option value="BRI">BRI</option>
+                      <option value="Lainnya">Bank Lainnya</option>
                     </select>
                     <svg
                       className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
@@ -377,6 +390,17 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                       />
                     </svg>
                   </div>
+                  {selectedBank === "Lainnya" && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        value={customBankName}
+                        onChange={(e) => setCustomBankName(e.target.value)}
+                        className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
+                        placeholder="Masukkan nama bank"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
