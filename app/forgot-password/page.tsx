@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildApiUrl } from "@/lib/api-client";
 import Footer from "../components/Footer";
+import WhatsAppButton from "../components/WhatsAppButton";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -479,6 +480,9 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
       </div>
+
+      {/* WhatsApp Sticky Button */}
+      <WhatsAppButton />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { buildApiUrl } from "@/lib/api-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Footer from "../components/Footer";
+import WhatsAppButton from "../components/WhatsAppButton";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -805,6 +806,8 @@ export default function RegisterPage() {
         </div>
       </div>
 
+      {/* WhatsApp Sticky Button */}
+      <WhatsAppButton />
     </div>
   );
 }
