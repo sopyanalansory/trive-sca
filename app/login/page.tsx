@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState("");
   const [showPasswordTooltip, setShowPasswordTooltip] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showResetPasswordOption, setShowResetPasswordOption] = useState(false);
   const router = useRouter();
 
   // Check if user already has token, redirect to accounts
@@ -136,8 +137,17 @@ export default function LoginPage() {
 
       if (!response.ok) {
         setLoginError(data.error || "Terjadi kesalahan saat login. Silakan coba lagi.");
+        // Show reset password option if password is wrong
+        if (data.errorType === 'wrong_password' && data.email) {
+          setShowResetPasswordOption(true);
+        } else {
+          setShowResetPasswordOption(false);
+        }
         return;
       }
+
+      // Clear reset password option on successful login
+      setShowResetPasswordOption(false);
 
       // Save token to localStorage
       if (data.token) {
@@ -339,6 +349,16 @@ export default function LoginPage() {
                 {loginError && (
                   <div className="mb-4">
                     <p className="text-red-500 text-[11px] sm:text-[12px] pl-2 sm:pl-[22px]">{loginError}</p>
+                    {showResetPasswordOption && (
+                      <div className="mt-2 pl-2 sm:pl-[22px]">
+                        <Link
+                          href="/forgot-password"
+                          className="text-sm text-[#2563eb] hover:text-[#1d4ed8] font-medium underline transition-colors"
+                        >
+                          Reset password dengan OTP
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     if (result.rows.length === 0) {
       return NextResponse.json(
-        { error: 'Akun ini tidak terdaftar atau kata sandi Anda saat ini salah!' },
+        { error: 'Akun ini tidak terdaftar atau kata sandi Anda saat ini salah!', errorType: 'user_not_found' },
         { status: 401 }
       );
     }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Akun ini tidak terdaftar atau kata sandi Anda saat ini salah!' },
+        { error: 'Akun ini tidak terdaftar atau kata sandi Anda saat ini salah!', errorType: 'wrong_password', email: email.toLowerCase().trim() },
         { status: 401 }
       );
     }
