@@ -81,7 +81,7 @@ export async function sendDepositNotificationEmail(data: DepositEmailData) {
 
              <div class="info-row">
               <span class="label">Email:</span>
-              <span class="value">${data.userName} (${data.userEmail})</span>
+              <span class="value">${data.userEmail}</span>
             </div>
             
             
