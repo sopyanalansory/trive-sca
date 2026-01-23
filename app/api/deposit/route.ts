@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { sendDepositNotificationEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,9 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify platform belongs to user
+    // Verify platform belongs to user and get platform details
     const platformCheck = await pool.query(
-      'SELECT id FROM platforms WHERE id = $1 AND user_id = $2',
+      'SELECT id, login_number FROM platforms WHERE id = $1 AND user_id = $2',
       [platformId, decoded.userId]
     );
 
@@ -57,6 +58,23 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    const platform = platformCheck.rows[0];
+
+    // Get user details for email
+    const userResult = await pool.query(
+      'SELECT id, name, email FROM users WHERE id = $1',
+      [decoded.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'User tidak ditemukan' },
+        { status: 404 }
+      );
+    }
+
+    const user = userResult.rows[0];
 
     // Insert deposit request
     const result = await pool.query(
@@ -68,6 +86,24 @@ export async function POST(request: NextRequest) {
     );
 
     const depositRequest = result.rows[0];
+
+    // Send email notification (non-blocking)
+    sendDepositNotificationEmail({
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      platformId: platform.id,
+      loginNumber: platform.login_number,
+      bankName: bankName,
+      currency: currency,
+      amount: amountNum,
+      description: description || undefined,
+      requestId: depositRequest.id,
+      createdAt: depositRequest.created_at,
+    }).catch((error) => {
+      console.error('Failed to send deposit notification email:', error);
+      // Don't fail the request if email fails
+    });
 
     return NextResponse.json(
       {

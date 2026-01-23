@@ -47,6 +47,38 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
     }
   }, [isOpen]);
 
+  const formatCurrency = (value: string): string => {
+    // Remove all non-digit characters except decimal point
+    const numericValue = value.replace(/[^\d.]/g, '');
+    
+    // Split by decimal point
+    const parts = numericValue.split('.');
+    
+    // Format the integer part with thousand separators
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    // Combine with decimal part if exists
+    return parts.length > 1 ? `${integerPart},${parts[1].slice(0, 2)}` : integerPart;
+  };
+
+  const parseCurrency = (value: string): number => {
+    // Remove thousand separators and replace comma with dot for decimal
+    const numericString = value.replace(/\./g, '').replace(',', '.');
+    return parseFloat(numericString) || 0;
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    // Allow empty string
+    if (inputValue === '') {
+      setAmount('');
+      return;
+    }
+    // Format the display value
+    const formatted = formatCurrency(inputValue);
+    setAmount(formatted);
+  };
+
   const fetchPlatforms = async () => {
     try {
       setLoading(true);
@@ -92,7 +124,8 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
       setError("Pilih Mata Uang");
       return;
     }
-    if (!amount || parseFloat(amount) <= 0) {
+    const amountValue = parseCurrency(amount);
+    if (!amount || amountValue <= 0) {
       setError("Jumlah harus lebih dari 0");
       return;
     }
@@ -115,7 +148,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
           platformId: parseInt(selectedPlatform),
           bankName: selectedBank,
           currency: selectedCurrency,
-          amount: parseFloat(amount),
+          amount: parseCurrency(amount),
           description: description || null,
         }),
       });
@@ -365,13 +398,12 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                     Jumlah
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={handleAmountChange}
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
                     placeholder="Jumlah"
-                    step="0.01"
-                    min="0"
+                    inputMode="decimal"
                   />
                 </div>
                 <div>
