@@ -87,6 +87,19 @@ export async function POST(request: NextRequest) {
 
     // Verify OTP via Verihubs
     try {
+      const verifyPayload = {
+        msisdn: fullPhoneNumber,
+        otp: String(verificationCode).trim(), // Ensure OTP is string and trimmed
+      };
+      
+      console.log('Verihubs verify request:', {
+        url: `${VERIHUBS_API_URL}/verify`,
+        payload: verifyPayload,
+        originalPhone: phone,
+        normalizedPhone: normalizedPhone,
+        countryCode: countryCode || '+62',
+      });
+
       const verihubsResponse = await fetch(`${VERIHUBS_API_URL}/verify`, {
         method: 'POST',
         headers: {
@@ -95,18 +108,49 @@ export async function POST(request: NextRequest) {
           'accept': 'application/json',
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          msisdn: fullPhoneNumber,
-          otp: verificationCode,
-        }),
+        body: JSON.stringify(verifyPayload),
       });
 
-      const verihubsData = await verihubsResponse.json();
-
-      if (!verihubsResponse.ok || !verihubsData.message || !verihubsData.message.includes('verified')) {
-        console.error('Verihubs verify error:', verihubsData);
+      // Get response text first to handle non-JSON responses
+      const responseText = await verihubsResponse.text();
+      let verihubsData;
+      
+      try {
+        verihubsData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Verihubs response is not valid JSON:', responseText);
+        console.error('Response status:', verihubsResponse.status);
         return NextResponse.json(
           { error: 'Kode verifikasi tidak valid atau sudah kadaluarsa' },
+          { status: 400 }
+        );
+      }
+
+      // Log full response for debugging
+      console.log('Verihubs verify response:', {
+        status: verihubsResponse.status,
+        ok: verihubsResponse.ok,
+        data: verihubsData,
+        phone: fullPhoneNumber,
+      });
+
+      // Check if verification was successful
+      // Verihubs might return different success indicators
+      const isVerified = verihubsResponse.ok && (
+        (verihubsData.message && verihubsData.message.toLowerCase().includes('verified')) ||
+        verihubsData.status === 'success' ||
+        verihubsData.success === true ||
+        (verihubsData.data && verihubsData.data.verified === true)
+      );
+
+      if (!isVerified) {
+        console.error('Verihubs verify error:', {
+          status: verihubsResponse.status,
+          data: verihubsData,
+          phone: fullPhoneNumber,
+        });
+        return NextResponse.json(
+          { error: verihubsData.message || 'Kode verifikasi tidak valid atau sudah kadaluarsa' },
           { status: 400 }
         );
       }
@@ -162,7 +206,29 @@ export async function POST(request: NextRequest) {
         { status: 201 }
       );
     } catch (verihubsError: any) {
-      console.error('Verihubs API error:', verihubsError);
+      console.error('Verihubs API error:', {
+        message: verihubsError.message,
+        stack: verihubsError.stack,
+        name: verihubsError.name,
+        phone: fullPhoneNumber,
+        code: verificationCode,
+      });
+      
+      // Provide more specific error messages based on error type
+      if (verihubsError.message?.includes('fetch')) {
+        return NextResponse.json(
+          { error: 'Gagal terhubung ke server verifikasi. Silakan coba lagi.' },
+          { status: 503 }
+        );
+      }
+      
+      if (verihubsError.message?.includes('timeout')) {
+        return NextResponse.json(
+          { error: 'Waktu verifikasi habis. Silakan coba lagi.' },
+          { status: 504 }
+        );
+      }
+      
       return NextResponse.json(
         { error: 'Gagal memverifikasi kode verifikasi. Silakan coba lagi.' },
         { status: 500 }
