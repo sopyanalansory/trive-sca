@@ -374,7 +374,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                       <option value="Mandiri">Mandiri</option>
                       <option value="BNI">BNI</option>
                       <option value="BRI">BRI</option>
-                      <option value="Lainnya">Bank Lainnya</option>
+                      {/* <option value="Lainnya">Bank Lainnya</option> */}
                     </select>
                     <svg
                       className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
