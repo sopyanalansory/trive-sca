@@ -1,11 +1,64 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { buildApiUrl } from "@/lib/api-client";
+
 interface DepositModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface Platform {
+  id: number;
+  accountId: string;
+  loginNumber: string;
+  serverName: string;
+  accountType: string | null;
+  clientGroupName: string | null;
+  status: string;
+  currency: string;
+  leverage: string | null;
+  swapFree: string;
+}
+
 export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPlatforms();
+    }
+  }, [isOpen]);
+
+  const fetchPlatforms = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(buildApiUrl("/api/platforms"), {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPlatforms(data.platforms || []);
+      }
+    } catch (error) {
+      console.error("Error fetching platforms:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -19,7 +72,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
       {/* Modal - Desktop: dari kanan, Mobile: center */}
       <div className="fixed inset-0 z-50 flex items-center justify-end lg:justify-end p-0 pointer-events-none">
         <div
-          className="bg-white shadow-xl w-full lg:w-[1120px] h-full lg:h-full overflow-y-auto pointer-events-auto transform transition-transform duration-300 ease-out"
+          className="bg-white shadow-xl w-full lg:w-[560px] h-full lg:h-full overflow-y-auto pointer-events-auto transform transition-transform duration-300 ease-out"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Modal Header */}
@@ -48,9 +101,9 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
 
           {/* Modal Content */}
           <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {/* Left Column - Bank Details (Read-only) */}
-              <div className="space-y-4">
+              <div className="space-y-4 hidden">
                 <div className="space-y-4">
                   <div className="border-b border-gray-200 pb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -113,18 +166,28 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
 
               {/* Right Column - Deposit Details */}
               <div className="space-y-4">
-                <div className="bg-gray-100 rounded-lg p-4">
+                {/* <div className="bg-gray-100 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
                     Saat mentransfer dana melalui Transfer Bank, Anda WAJIB menuliskan Nomor Rekening Anda sebagai referensi.
                   </p>
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Akun Trading
                   </label>
                   <div className="relative">
-                    <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
-                      <option>Pilih Akun Trading</option>
+                    <select 
+                      value={selectedPlatform}
+                      onChange={(e) => setSelectedPlatform(e.target.value)}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
+                      disabled={loading}
+                    >
+                      <option value="">Pilih Akun Trading</option>
+                      {platforms.map((platform) => (
+                        <option key={platform.id} value={platform.id.toString()}>
+                          {platform.loginNumber} - {platform.accountType || platform.serverName}
+                        </option>
+                      ))}
                     </select>
                     <svg
                       className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
@@ -143,11 +206,15 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rekening Bank Terpisah untuk Deposit
+                    Bank untuk transfer
                   </label>
                   <div className="relative">
                     <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
                       <option>Pilih Rekening Bank</option>
+                      <option value="BCA">BCA</option>
+                      <option value="Mandiri">Mandiri</option>
+                      <option value="BNI">BNI</option>
+                      <option value="BRI">BRI</option>
                     </select>
                     <svg
                       className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
@@ -171,6 +238,8 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   <div className="relative">
                     <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
                       <option>Pilih Mata Uang</option>
+                      <option value="USD">USD</option>
+                      <option value="IDR">IDR</option>
                     </select>
                     <svg
                       className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"

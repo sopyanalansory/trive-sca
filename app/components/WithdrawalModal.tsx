@@ -1,11 +1,66 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { buildApiUrl } from "@/lib/api-client";
+
 interface WithdrawalModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface Platform {
+  id: number;
+  accountId: string;
+  loginNumber: string;
+  serverName: string;
+  accountType: string | null;
+  clientGroupName: string | null;
+  status: string;
+  currency: string;
+  leverage: string | null;
+  swapFree: string;
+}
+
 export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProps) {
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+  const [selectedBank, setSelectedBank] = useState<string>("");
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPlatforms();
+    }
+  }, [isOpen]);
+
+  const fetchPlatforms = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(buildApiUrl("/api/platforms"), {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPlatforms(data.platforms || []);
+      }
+    } catch (error) {
+      console.error("Error fetching platforms:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -113,7 +168,7 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
 
               {/* Right Column - Deposit Details */}
               <div className="space-y-4">
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nama Nasabah
                   </label>
@@ -122,69 +177,119 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
                     placeholder="Nama Nasabah"
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Dari Akun
                   </label>
-                  <input
-                    type="text"
-                    className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
-                    placeholder="Dari Akun"
-                  />
+                  <div className="relative">
+                    <select 
+                      value={selectedPlatform}
+                      onChange={(e) => setSelectedPlatform(e.target.value)}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
+                      disabled={loading}
+                    >
+                      <option value="">Pilih Akun Trading</option>
+                      {platforms.map((platform) => (
+                        <option key={platform.id} value={platform.id.toString()}>
+                          {platform.loginNumber} - {platform.accountType || platform.serverName}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tarik Dana ke Bank
                   </label>
-                  <input
-                    type="text"
-                    className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
-                    placeholder="Tarik Dana ke Bank"
-                  />
+                  <div className="relative">
+                    <select 
+                      value={selectedBank}
+                      onChange={(e) => setSelectedBank(e.target.value)}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
+                    >
+                      <option value="">Pilih Rekening Bank</option>
+                      <option value="BCA">BCA</option>
+                      <option value="Mandiri">Mandiri</option>
+                      <option value="BNI">BNI</option>
+                      <option value="BRI">BRI</option>
+                    </select>
+                    <svg
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Jumlah (USD)
+                    Mata uang
+                  </label>
+                  <div className="relative">
+                    <select 
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value)}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
+                    >
+                      <option value="">Pilih Mata Uang</option>
+                      <option value="USD">USD</option>
+                      <option value="IDR">IDR</option>
+                    </select>
+                    <svg
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Jumlah
                   </label>
                   <input
                     type="number"
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
-                    placeholder="Jumlah (USD)"
+                    placeholder="Jumlah"
                   />
-                </div>
-                <div className="bg-gray-100 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
-                  Jumlah penarikan Anda akan dikonversikan ke IDR jika rekening bank yang Anda daftarkan dalam IDR, dengan kurs konversi yang Anda pilih saat registrasi.
-                  <br />
-                  <br />
-                  Rate: Rp10.000
-                  <br />
-                  <br />
-                  Estimasi Nilai Konversi Penarikan Dana Anda:Rp 0
-                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Keterangan
+                    Penjelasan
                   </label>
                   <textarea
                     rows={4}
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 resize-none"
-                    placeholder="Keterangan"
+                    placeholder="Penjelasan"
                   />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-700">
-                    <a
-                      href="https://www.triveinvest.co.id/trading/deposit-withdrawal"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-black hover:text-[#4cc5e6] underline"
-                    >
-                      Syarat dan Ketentuan: Withdrawal
-                    </a>
-                  </p>
                 </div>
                 <button className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-[400px] font-medium hover:bg-[#1a1b1c] transition-colors">
                   Kirim
