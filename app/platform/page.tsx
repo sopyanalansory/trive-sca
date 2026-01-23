@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { buildApiUrl } from "@/lib/api-client";
+import Footer from "../components/Footer";
 
 export default function PlatformPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -437,7 +438,7 @@ export default function PlatformPage() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden bg-white">
-        <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+        <div className="flex-1 p-4 lg:p-8 overflow-x-hidden min-h-0">
           {/* Breadcrumb */}
           <div className="mb-4">
             <p className="text-sm text-gray-600">Dasbor / Platform</p>
@@ -523,6 +524,9 @@ export default function PlatformPage() {
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <Footer />
       </main>
     </div>
   );

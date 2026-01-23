@@ -5,6 +5,7 @@ import Link from "next/link";
 import { buildApiUrl } from "@/lib/api-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Footer from "../components/Footer";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -426,44 +427,7 @@ export default function LoginPage() {
 
             {/* Footer below form */}
             <div className="mt-4 sm:mt-6 relative z-10">
-              <div className="text-center text-[10px] sm:text-xs text-black space-y-1 sm:space-y-1.5">
-                <p className="font-medium">© Trive Invest 2025</p>
-                <div className="flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-2.5 gap-y-0.5">
-                  <Link
-                    href="/privacy-policy"
-                    className="text-black hover:text-[#374151] underline"
-                  >
-                    Privacy Policy
-                  </Link>
-                  <Link
-                    href="/terms-of-business"
-                    className="text-black hover:text-[#374151] underline"
-                  >
-                    Terms of Business
-                  </Link>
-                  <Link
-                    href="/risk-notification"
-                    className="text-black hover:text-[#374151] underline"
-                  >
-                    Risk Notification
-                  </Link>
-                  <Link
-                    href="/license"
-                    className="text-black hover:text-[#374151] underline"
-                  >
-                    Licenses
-                  </Link>
-                </div>
-                <p className="text-[10px] sm:text-xs px-2">
-                  Call 5/24: 150898 Need help:{" "}
-                  <a
-                    href="mailto:support@triveinvest.co.id"
-                    className="text-black hover:text-[#374151] underline break-all"
-                  >
-                    support@triveinvest.co.id
-                  </a>
-                </p>
-              </div>
+              <Footer variant="transparent" />
             </div>
           </div>
         </div>

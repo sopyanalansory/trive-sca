@@ -8,6 +8,7 @@ import { buildApiUrl } from "@/lib/api-client";
 import DepositModal from "../components/DepositModal";
 import WithdrawalModal from "../components/WithdrawalModal";
 import NotificationModal from "../components/NotificationModal";
+import Footer from "../components/Footer";
 
 // Interface untuk data slider dari API
 interface SlideData {
@@ -617,7 +618,7 @@ export default function AccountsPage() {
         </div> */}
 
         {/* Content Area */}
-        <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+        <div className="flex-1 p-4 lg:p-8 overflow-x-hidden min-h-0">
           {/* Breadcrumb */}
           <div className="mb-4">
             <p className="text-sm text-gray-600">Dasbor / Akun</p>
@@ -662,22 +663,24 @@ export default function AccountsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
               <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#69d7f6]"></div>
-              <p className="text-sm text-gray-600 mb-2">Ekuitas bersih</p>
+              {/* <p className="text-sm text-gray-600 mb-2">Ekuitas bersih</p> */}
+              <p className="text-lg font-semibold text-gray-600 mb-2">Ekuitas Bersih</p>
               {/* <p className="text-2xl font-semibold text-black">$0.00</p> */}
-              <p className="text-lg font-semibold text-black">Memuat data...</p>
+              {/* <p className="text-lg font-semibold text-black">Memuat data...</p> */}
+              <p className="text-sm text-black">Memuat data...</p>
             </div>
               <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-400"></div>
-              <p className="text-sm text-gray-600 mb-2">Keuntungan dan kerugian harian</p>
+              <p className="text-lg font-semibold text-gray-600 mb-2">Profit dan Loss </p>
               {/* <p className="5 font-semibold text-black">$0.00</p> */}
-              <p className="text-lg font-semibold text-black">Memuat data...</p>
+              <p className="text-sm text-black">Memuat data...</p>
             </div>
               <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400"></div>
               {/* <p className="text-sm text-gray-600 mb-2">Total uang tunai yang tersedia untuk investasi</p> */}
-              <p className="text-sm text-gray-600 mb-2">Total balance</p>
+              <p className="text-lg font-semibold text-gray-600 mb-2">Total Balance</p>
               {/* <p className="text-xl font-semibold text-black">$0.00</p> */}
-              <p className="text-lg font-semibold text-black">Memuat data...</p>
+              <p className="text-sm text-black">Memuat data...</p>
             </div>
           </div>
 
@@ -977,6 +980,9 @@ export default function AccountsPage() {
             </div>
           </div> */}
         </div>
+
+        {/* Footer */}
+        <Footer />
       </main>
 
       {/* Floating Action Buttons */}
