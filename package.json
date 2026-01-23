@@ -12,7 +12,8 @@
     "test-prod-db": "node scripts/test-production-db.js",
     "import-users": "tsx scripts/import-users-from-csv.ts",
     "import-platforms": "tsx scripts/import-platforms-from-csv.ts",
-    "migrate-platform": "tsx lib/run-platform-migration.ts"
+    "migrate-platform": "tsx lib/run-platform-migration.ts",
+    "migrate-deposit-withdrawal": "tsx lib/run-deposit-withdrawal-migration.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

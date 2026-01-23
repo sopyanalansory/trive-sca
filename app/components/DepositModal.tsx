@@ -24,11 +24,26 @@ interface Platform {
 export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+  const [selectedBank, setSelectedBank] = useState<string>("");
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
       fetchPlatforms();
+      // Reset form when modal opens
+      setSelectedPlatform("");
+      setSelectedBank("");
+      setSelectedCurrency("");
+      setAmount("");
+      setDescription("");
+      setError("");
+      setSuccess("");
     }
   }, [isOpen]);
 
@@ -56,6 +71,77 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
       console.error("Error fetching platforms:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    // Validation
+    if (!selectedPlatform) {
+      setError("Pilih Akun Trading");
+      return;
+    }
+    if (!selectedBank) {
+      setError("Pilih Bank untuk transfer");
+      return;
+    }
+    if (!selectedCurrency) {
+      setError("Pilih Mata Uang");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      setError("Jumlah harus lebih dari 0");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token tidak ditemukan. Silakan login kembali.");
+        return;
+      }
+
+      const response = await fetch(buildApiUrl("/api/deposit"), {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          platformId: parseInt(selectedPlatform),
+          bankName: selectedBank,
+          currency: selectedCurrency,
+          amount: parseFloat(amount),
+          description: description || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess("Deposit request berhasil dibuat");
+        // Reset form
+        setSelectedPlatform("");
+        setSelectedBank("");
+        setSelectedCurrency("");
+        setAmount("");
+        setDescription("");
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        setError(data.error || "Terjadi kesalahan saat membuat deposit request");
+      }
+    } catch (error) {
+      console.error("Error submitting deposit:", error);
+      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -165,7 +251,17 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
               </div>
 
               {/* Right Column - Deposit Details */}
-              <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                    {success}
+                  </div>
+                )}
                 {/* <div className="bg-gray-100 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
                     Saat mentransfer dana melalui Transfer Bank, Anda WAJIB menuliskan Nomor Rekening Anda sebagai referensi.
@@ -209,8 +305,12 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                     Bank untuk transfer
                   </label>
                   <div className="relative">
-                    <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
-                      <option>Pilih Rekening Bank</option>
+                    <select 
+                      value={selectedBank}
+                      onChange={(e) => setSelectedBank(e.target.value)}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
+                    >
+                      <option value="">Pilih Rekening Bank</option>
                       <option value="BCA">BCA</option>
                       <option value="Mandiri">Mandiri</option>
                       <option value="BNI">BNI</option>
@@ -236,8 +336,12 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                     Mata uang
                   </label>
                   <div className="relative">
-                    <select className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent">
-                      <option>Pilih Mata Uang</option>
+                    <select 
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value)}
+                      className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 appearance-none bg-transparent"
+                    >
+                      <option value="">Pilih Mata Uang</option>
                       <option value="USD">USD</option>
                       <option value="IDR">IDR</option>
                     </select>
@@ -262,8 +366,12 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   </label>
                   <input
                     type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
                     placeholder="Jumlah"
+                    step="0.01"
+                    min="0"
                   />
                 </div>
                 <div>
@@ -272,14 +380,20 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   </label>
                   <textarea
                     rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 resize-none"
                     placeholder="Penjelasan"
                   />
                 </div>
-                <button className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-[400px] font-medium hover:bg-[#1a1b1c] transition-colors">
-                  Kirim
+                <button 
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-[400px] font-medium hover:bg-[#1a1b1c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Mengirim..." : "Kirim"}
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>

@@ -26,11 +26,24 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
   const [selectedBank, setSelectedBank] = useState<string>("");
   const [selectedCurrency, setSelectedCurrency] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
       fetchPlatforms();
+      // Reset form when modal opens
+      setSelectedPlatform("");
+      setSelectedBank("");
+      setSelectedCurrency("");
+      setAmount("");
+      setDescription("");
+      setError("");
+      setSuccess("");
     }
   }, [isOpen]);
 
@@ -58,6 +71,77 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
       console.error("Error fetching platforms:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    // Validation
+    if (!selectedPlatform) {
+      setError("Pilih Akun Trading");
+      return;
+    }
+    if (!selectedBank) {
+      setError("Pilih Bank untuk transfer");
+      return;
+    }
+    if (!selectedCurrency) {
+      setError("Pilih Mata Uang");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      setError("Jumlah harus lebih dari 0");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Token tidak ditemukan. Silakan login kembali.");
+        return;
+      }
+
+      const response = await fetch(buildApiUrl("/api/withdrawal"), {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          platformId: parseInt(selectedPlatform),
+          bankName: selectedBank,
+          currency: selectedCurrency,
+          amount: parseFloat(amount),
+          description: description || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess("Withdrawal request berhasil dibuat");
+        // Reset form
+        setSelectedPlatform("");
+        setSelectedBank("");
+        setSelectedCurrency("");
+        setAmount("");
+        setDescription("");
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        setError(data.error || "Terjadi kesalahan saat membuat withdrawal request");
+      }
+    } catch (error) {
+      console.error("Error submitting withdrawal:", error);
+      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -167,7 +251,17 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
               </div> */}
 
               {/* Right Column - Deposit Details */}
-              <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                    {success}
+                  </div>
+                )}
                 {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nama Nasabah
@@ -277,8 +371,12 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
                   </label>
                   <input
                     type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0"
                     placeholder="Jumlah"
+                    step="0.01"
+                    min="0"
                   />
                 </div>
                 <div>
@@ -287,14 +385,20 @@ export default function WithdrawalModal({ isOpen, onClose }: WithdrawalModalProp
                   </label>
                   <textarea
                     rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     className="w-full border-0 border-b border-gray-300 px-0 py-2 text-sm text-black focus:outline-none focus:border-[#69d7f6] focus:ring-0 resize-none"
                     placeholder="Penjelasan"
                   />
                 </div>
-                <button className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-[400px] font-medium hover:bg-[#1a1b1c] transition-colors">
-                  Kirim
+                <button 
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-[#2b2c24] text-white px-6 py-3 rounded-[400px] font-medium hover:bg-[#1a1b1c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Mengirim..." : "Kirim"}
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>
