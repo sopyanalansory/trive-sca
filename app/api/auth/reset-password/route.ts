@@ -122,9 +122,13 @@ export async function POST(request: NextRequest) {
       await pool.query(
         `UPDATE verification_codes 
          SET verified = true 
-         WHERE phone = $1 AND verified = false 
-         ORDER BY created_at DESC 
-         LIMIT 1`,
+         WHERE id = (
+           SELECT id 
+           FROM verification_codes 
+           WHERE phone = $1 AND verified = false 
+           ORDER BY created_at DESC 
+           LIMIT 1
+         )`,
         [msisdn]
       );
 
