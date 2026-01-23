@@ -565,20 +565,20 @@ export default function AccountsPage() {
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#69d7f6]"></div>
               <p className="text-sm text-gray-600 mb-2">Ekuitas bersih</p>
               {/* <p className="text-2xl font-semibold text-black">$0.00</p> */}
-              <p className="text-2xl font-semibold text-black">Loading data...</p>
+              <p className="text-xl font-semibold text-black">Memuat data...</p>
             </div>
               <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-400"></div>
               <p className="text-sm text-gray-600 mb-2">Keuntungan dan kerugian harian</p>
-              {/* <p className="text-2xl font-semibold text-black">$0.00</p> */}
-              <p className="text-2xl font-semibold text-black">Loading data...</p>
+              {/* <p className="5 font-semibold text-black">$0.00</p> */}
+              <p className="text-xl font-semibold text-black">Memuat data...</p>
             </div>
               <div className="bg-white rounded-lg p-4 lg:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400"></div>
               {/* <p className="text-sm text-gray-600 mb-2">Total uang tunai yang tersedia untuk investasi</p> */}
               <p className="text-sm text-gray-600 mb-2">Total balance</p>
-              {/* <p className="text-2xl font-semibold text-black">$0.00</p> */}
-              <p className="text-2xl font-semibold text-black">Loading data...</p>
+              {/* <p className="text-xl font-semibold text-black">$0.00</p> */}
+              <p className="text-xl font-semibold text-black">Memuat data...</p>
             </div>
           </div>
 
