@@ -282,10 +282,10 @@ export default function RegisterPage() {
       setIsCodeSent(true);
       setResendCountdown(60); // Set countdown 60 detik
       
-      // In development, show the code in console/alert for testing
+      // In development, show the code in console for testing (not in alert for better UX)
       if (data.code) {
         console.log("Verification code (dev only):", data.code);
-        alert(`Kode verifikasi (untuk testing): ${data.code}`);
+        // Alert removed - check browser console for verification code in development
       }
     } catch (error) {
       console.error("Error sending verification code:", error);
