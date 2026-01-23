@@ -356,7 +356,7 @@ export default function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bank untuk transfer
+                    Nama Bank
                   </label>
                   <div className="relative">
                     <select 
