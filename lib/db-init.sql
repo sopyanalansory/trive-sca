@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS market_updates (
   economic_data_4 TEXT,
   economic_data_5 TEXT,
   created_by VARCHAR(255) NOT NULL,
+  salesforce_id VARCHAR(255) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -68,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_market_updates_status ON market_updates(status);
 CREATE INDEX IF NOT EXISTS idx_market_updates_research_type ON market_updates(research_type);
 CREATE INDEX IF NOT EXISTS idx_market_updates_created_at ON market_updates(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_market_updates_created_by ON market_updates(created_by);
+CREATE INDEX IF NOT EXISTS idx_market_updates_salesforce_id ON market_updates(salesforce_id);
 
 -- Trigger to automatically update updated_at for market_updates
 DROP TRIGGER IF EXISTS update_market_updates_updated_at ON market_updates;

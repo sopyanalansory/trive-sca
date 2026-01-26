@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const researchType = searchParams.get('research_type');
     const createdBy = searchParams.get('created_by');
+    const salesforceId = searchParams.get('salesforce_id');
     const search = searchParams.get('search');
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
@@ -73,6 +74,12 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
     
+    if (salesforceId) {
+      conditions.push(`salesforce_id = $${paramIndex}`);
+      values.push(salesforceId);
+      paramIndex++;
+    }
+    
     if (search) {
       conditions.push(`(title ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
       values.push(`%${search}%`);
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
     // Validate sort column to prevent SQL injection
-    const allowedSortColumns = ['id', 'created_at', 'updated_at', 'status', 'research_type', 'title', 'created_by'];
+    const allowedSortColumns = ['id', 'created_at', 'updated_at', 'status', 'research_type', 'title', 'created_by', 'salesforce_id'];
     const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at';
     
     // Get total count
@@ -118,6 +125,7 @@ export async function GET(request: NextRequest) {
         economic_data_4,
         economic_data_5,
         created_by,
+        salesforce_id,
         created_at,
         updated_at
       FROM market_updates 
@@ -176,15 +184,16 @@ export async function POST(request: NextRequest) {
       economic_data_3,
       economic_data_4,
       economic_data_5,
-      created_by 
+      created_by,
+      salesforce_id
     } = body;
 
     // Validate required fields
-    if (!research_type || !title || !created_by) {
+    if (!research_type || !title || !created_by || !salesforce_id) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Research type, title, dan created_by wajib diisi' 
+          error: 'Research type, title, created_by, dan salesforce_id wajib diisi' 
         },
         { status: 400 }
       );
@@ -223,10 +232,10 @@ export async function POST(request: NextRequest) {
 
     // Insert new market update
     const result = await pool.query(
-      `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by, created_at, updated_at`,
-      [research_type, finalStatus, title, summary || null, img_url || null, economic_data_1 || null, economic_data_2 || null, economic_data_3 || null, economic_data_4 || null, economic_data_5 || null, created_by]
+      `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by, salesforce_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by, salesforce_id, created_at, updated_at`,
+      [research_type, finalStatus, title, summary || null, img_url || null, economic_data_1 || null, economic_data_2 || null, economic_data_3 || null, economic_data_4 || null, economic_data_5 || null, created_by, salesforce_id]
     );
 
     return NextResponse.json(
