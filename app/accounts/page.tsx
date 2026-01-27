@@ -760,29 +760,29 @@ export default function AccountsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[800px]">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Account Type</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Platform</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Login</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">ServerName</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Aksi</th>
+                        <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[120px]">Account Type</th>
+                        <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[100px]">Platform</th>
+                        <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[80px]">Login</th>
+                        <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[150px]">Server Name</th>
+                        <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[120px]">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
                       {accounts.map((account) => (
                         <tr key={account.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-sm text-gray-900">{account.accountType}</td>
-                          {/* <td className="py-3 px-4 text-sm text-gray-900">{account.platform}</td> */}
-                          <td className="py-3 px-4 text-sm text-gray-900">MetaTrader 5</td>
-                          <td className="py-3 px-4 text-sm text-gray-900">{account.login}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900">TriveInvest-MT5-Live</td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.accountType}</td>
+                          {/* <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.platform}</td> */}
+                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">MetaTrader 5</td>
+                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.login}</td>
+                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">TriveInvest-MT5-Live</td>
+                          <td className="py-3 px-2 lg:px-4 whitespace-nowrap">
                             <button
                               onClick={() => handleResetPassword(account.id)}
                               disabled={resettingPassword === account.id}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-[#69d7f6] rounded hover:bg-[#5bc7e6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-medium text-white bg-[#69d7f6] rounded hover:bg-[#5bc7e6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                             >
                               {resettingPassword === account.id ? "Mengirim..." : "Reset Password"}
                             </button>
