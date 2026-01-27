@@ -26,6 +26,10 @@ export default function AccountsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileHovered, setProfileHovered] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Untuk mobile carousel per slide
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
@@ -93,6 +97,99 @@ export default function AccountsPage() {
   useEffect(() => {
     fetchAccounts();
   }, [activeTab]);
+
+  // Auto-slide untuk mobile (gambar dalam slide)
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    
+    const currentSlideData = slidesData[currentSlide];
+    if (!currentSlideData || !currentSlideData.images || currentSlideData.images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => {
+        const maxIndex = currentSlideData.images.length - 1;
+        if (prev >= maxIndex) {
+          // Jika sudah di gambar terakhir, lanjut ke slide berikutnya atau kembali ke awal
+          if (currentSlide < slidesData.length - 1) {
+            setCurrentSlide((prevSlide) => prevSlide + 1);
+            return 0;
+          } else {
+            return 0; // Kembali ke gambar pertama slide pertama
+          }
+        }
+        return prev + 1;
+      });
+    }, 4000); // Auto slide setiap 4 detik
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, currentSlide, slidesData]);
+
+  // Reset image index saat slide berubah
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [currentSlide]);
+
+  // Touch handlers untuk swipe
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsAutoPlaying(false); // Pause auto-play saat user swipe
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    const currentSlideData = slidesData[currentSlide];
+    const maxImageIndex = currentSlideData?.images?.length ? currentSlideData.images.length - 1 : 0;
+
+    if (isLeftSwipe) {
+      // Swipe kiri: next image atau next slide
+      if (currentImageIndex < maxImageIndex) {
+        setCurrentImageIndex((prev) => prev + 1);
+      } else if (currentSlide < slidesData.length - 1) {
+        setCurrentSlide((prev) => prev + 1);
+        setCurrentImageIndex(0);
+      } else {
+        // Kembali ke awal
+        setCurrentSlide(0);
+        setCurrentImageIndex(0);
+      }
+    }
+    
+    if (isRightSwipe) {
+      // Swipe kanan: previous image atau previous slide
+      if (currentImageIndex > 0) {
+        setCurrentImageIndex((prev) => prev - 1);
+      } else if (currentSlide > 0) {
+        const prevSlideData = slidesData[currentSlide - 1];
+        const prevMaxIndex = prevSlideData?.images?.length ? prevSlideData.images.length - 1 : 0;
+        setCurrentSlide((prev) => prev - 1);
+        setCurrentImageIndex(prevMaxIndex);
+      } else {
+        // Ke slide terakhir, gambar terakhir
+        const lastSlideIndex = slidesData.length - 1;
+        const lastSlideData = slidesData[lastSlideIndex];
+        const lastMaxIndex = lastSlideData?.images?.length ? lastSlideData.images.length - 1 : 0;
+        setCurrentSlide(lastSlideIndex);
+        setCurrentImageIndex(lastMaxIndex);
+      }
+    }
+
+    // Resume auto-play setelah 5 detik
+    setTimeout(() => {
+      setIsAutoPlaying(true);
+    }, 5000);
+  };
 
   // Fetch user data from API
   const fetchUserData = async (token: string) => {
@@ -371,7 +468,12 @@ export default function AccountsPage() {
 
           {/* Promotional Banners Carousel */}
           <div className="mb-6 relative">
-            <div className="relative overflow-hidden w-full rounded-lg">
+            <div 
+              className="relative overflow-hidden w-full"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
               <div 
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ 
@@ -384,32 +486,42 @@ export default function AccountsPage() {
                     className="w-full shrink-0 bg-white rounded-lg shadow-sm relative"
                     style={{ minWidth: '100%' }}
                   >
-                    <div className="p-4 lg:p-6">
-                      {/* {slide.badge && (
-                        <div className={`absolute top-4 right-4 ${slide.badge.bgColor} ${slide.badge.textColor} text-xs px-2 py-1 rounded font-medium z-10`}>
-                          {slide.badge.text}
-                    </div>
-                      )} */}
-                      <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 justify-center items-center mt-6 lg:mt-0">
+                    {/* Mobile: Show single image at a time with carousel - Full width */}
+                    <div className="lg:hidden relative overflow-hidden">
+                      <div 
+                        className="flex transition-transform duration-500 ease-in-out"
+                        style={{ 
+                          transform: `translateX(-${slideIndex === currentSlide ? currentImageIndex * 100 : 0}%)`
+                        }}
+                      >
                         {slide.images && slide.images.length > 0 ? (
-                          <>
-                            <div className="shrink-0 w-full max-w-sm lg:hidden">
+                          slide.images.map((imageUrl, imageIndex) => (
+                            <div key={imageIndex} className="w-full shrink-0" style={{ minWidth: '100%' }}>
                               <img
-                                src={slide.images[0]}
-                                alt={`Slide ${slideIndex + 1} - Image 1`}
-                          className="w-full h-40 md:h-52 rounded-lg object-cover"
-                        />
+                                src={imageUrl}
+                                alt={`Slide ${slideIndex + 1} - Image ${imageIndex + 1}`}
+                                className="w-full h-48 md:h-64"
+                              />
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-gray-400 text-sm w-full p-4">No images available</div>
+                        )}
                       </div>
-                            {slide.images.map((imageUrl, imageIndex) => (
-                              <div key={imageIndex} className="hidden lg:block shrink-0 w-full max-w-sm lg:w-1/3">
-                        <img
-                                  src={imageUrl}
-                                  alt={`Slide ${slideIndex + 1} - Image ${imageIndex + 1}`}
-                          className="w-full h-40 md:h-52 object-cover"
-                        />
-                      </div>
-                            ))}
-                          </>
+                    </div>
+                    {/* Desktop: Show all images side by side */}
+                    <div className="hidden lg:block p-4 lg:p-6">
+                      <div className="flex flex-row gap-3 lg:gap-4 justify-center items-center">
+                        {slide.images && slide.images.length > 0 ? (
+                          slide.images.map((imageUrl, imageIndex) => (
+                            <div key={imageIndex} className="shrink-0 w-full max-w-sm lg:w-1/3">
+                              <img
+                                src={imageUrl}
+                                alt={`Slide ${slideIndex + 1} - Image ${imageIndex + 1}`}
+                                className="w-full h-40 md:h-52"
+                              />
+                            </div>
+                          ))
                         ) : (
                           <div className="text-gray-400 text-sm">No images available</div>
                         )}
@@ -420,62 +532,172 @@ export default function AccountsPage() {
               </div>
             </div>
 
+            {/* Mobile: Prev/Next buttons untuk gambar dalam slide */}
+            <div className="lg:hidden">
+              {(() => {
+                const currentSlideData = slidesData[currentSlide];
+                const hasMultipleImages = currentSlideData?.images && currentSlideData.images.length > 1;
+                if (!hasMultipleImages) return null;
+                
+                return (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsAutoPlaying(false);
+                        if (currentImageIndex > 0) {
+                          setCurrentImageIndex((prev) => prev - 1);
+                        } else {
+                          // Ke slide sebelumnya, gambar terakhir
+                          if (currentSlide > 0) {
+                            const prevSlideData = slidesData[currentSlide - 1];
+                            const prevMaxIndex = prevSlideData?.images?.length ? prevSlideData.images.length - 1 : 0;
+                            setCurrentSlide((prev) => prev - 1);
+                            setCurrentImageIndex(prevMaxIndex);
+                          } else {
+                            // Ke slide terakhir, gambar terakhir
+                            const lastSlideIndex = slidesData.length - 1;
+                            const lastSlideData = slidesData[lastSlideIndex];
+                            const lastMaxIndex = lastSlideData?.images?.length ? lastSlideData.images.length - 1 : 0;
+                            setCurrentSlide(lastSlideIndex);
+                            setCurrentImageIndex(lastMaxIndex);
+                          }
+                        }
+                        setTimeout(() => setIsAutoPlaying(true), 5000);
+                      }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
+                      aria-label="Previous image"
+                    >
+                      <svg
+                        className="w-6 h-6 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAutoPlaying(false);
+                        const maxImageIndex = currentSlideData.images.length - 1;
+                        if (currentImageIndex < maxImageIndex) {
+                          setCurrentImageIndex((prev) => prev + 1);
+                        } else {
+                          // Ke slide berikutnya, gambar pertama
+                          if (currentSlide < slidesData.length - 1) {
+                            setCurrentSlide((prev) => prev + 1);
+                            setCurrentImageIndex(0);
+                          } else {
+                            // Kembali ke slide pertama, gambar pertama
+                            setCurrentSlide(0);
+                            setCurrentImageIndex(0);
+                          }
+                        }
+                        setTimeout(() => setIsAutoPlaying(true), 5000);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
+                      aria-label="Next image"
+                    >
+                      <svg
+                        className="w-6 h-6 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+            {/* Desktop: Prev/Next buttons untuk slide */}
             {slidesData.length > 1 && (
-              <>
-            <button
+              <div className="hidden lg:block">
+                <button
                   onClick={() => setCurrentSlide((prev) => (prev === 0 ? slidesData.length - 1 : prev - 1))}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
-              aria-label="Previous slide"
-            >
-              <svg
-                className="w-6 h-6 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <button
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
+                  aria-label="Previous slide"
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </button>
+                <button
                   onClick={() => setCurrentSlide((prev) => (prev === slidesData.length - 1 ? 0 : prev + 1))}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
-              aria-label="Next slide"
-            >
-              <svg
-                className="w-6 h-6 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-              </>
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors z-10"
+                  aria-label="Next slide"
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
             )}
 
-            {slidesData.length > 1 && (
-            <div className="flex justify-center gap-2 mt-4">
-                {slidesData.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    currentSlide === index ? "bg-[#69d7f6]" : "bg-gray-300"
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
+            {/* Mobile: Dots untuk gambar dalam slide aktif */}
+            <div className="lg:hidden flex justify-center gap-2 mt-4">
+              {slidesData[currentSlide]?.images && slidesData[currentSlide].images.length > 1 && (
+                slidesData[currentSlide].images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setCurrentImageIndex(index);
+                      setIsAutoPlaying(false);
+                      setTimeout(() => setIsAutoPlaying(true), 5000);
+                    }}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      currentImageIndex === index ? "bg-[#69d7f6]" : "bg-gray-300"
+                    }`}
+                    aria-label={`Go to image ${index + 1}`}
+                  />
+                ))
+              )}
             </div>
+            {/* Desktop: Dots untuk slide */}
+            {slidesData.length > 1 && (
+              <div className="hidden lg:flex justify-center gap-2 mt-4">
+                {slidesData.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      currentSlide === index ? "bg-[#69d7f6]" : "bg-gray-300"
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
