@@ -9,6 +9,7 @@ import NotificationModal from "../components/NotificationModal";
 import Footer from "../components/Footer";
 import WhatsAppButton from "../components/WhatsAppButton";
 import Sidebar from "../components/Sidebar";
+import OpenAccountButton from "../components/OpenAccountButton";
 
 // Interface untuk data slider dari API
 interface SlideData {
@@ -348,9 +349,12 @@ export default function AccountsPage() {
               <p className="text-black text-sm text-left">
                 Anda belum memiliki akun live. Hanya butuh beberapa menit untuk membuat akun live. Mulai trading dengan Trive Invest.
               </p>
-              <button className="bg-[#02b5e7] text-white px-4 lg:px-6 py-2 rounded-full text-sm font-medium hover:bg-[#0099cc] transition-colors whitespace-nowrap">
+              <OpenAccountButton 
+                onClick={() => router.push("/open-investment-account")}
+                className="!bg-[#02b5e7] !hover:bg-[#0099cc] whitespace-nowrap"
+              >
                 Buka Akun Live
-              </button>
+              </OpenAccountButton>
             </div>
           )}
           {/* Breadcrumb */}
