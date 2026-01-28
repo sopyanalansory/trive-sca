@@ -124,6 +124,7 @@ export async function GET(request: NextRequest) {
         economic_data_3,
         economic_data_4,
         economic_data_5,
+        meta_text,
         created_by,
         salesforce_id,
         created_at,
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
       economic_data_3,
       economic_data_4,
       economic_data_5,
+      meta_text,
       created_by,
       salesforce_id
     } = body;
@@ -232,10 +234,10 @@ export async function POST(request: NextRequest) {
 
     // Insert new market update
     const result = await pool.query(
-      `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by, salesforce_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by, salesforce_id, created_at, updated_at`,
-      [research_type, finalStatus, title, summary || null, img_url || null, economic_data_1 || null, economic_data_2 || null, economic_data_3 || null, economic_data_4 || null, economic_data_5 || null, created_by, salesforce_id]
+      `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at`,
+      [research_type, finalStatus, title, summary || null, img_url || null, economic_data_1 || null, economic_data_2 || null, economic_data_3 || null, economic_data_4 || null, economic_data_5 || null, meta_text || null, created_by, salesforce_id]
     );
 
     return NextResponse.json(

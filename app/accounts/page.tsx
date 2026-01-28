@@ -351,7 +351,7 @@ export default function AccountsPage() {
               </p>
               <OpenAccountButton 
                 onClick={() => router.push("/open-investment-account")}
-                className="!bg-[#02b5e7] !hover:bg-[#0099cc] whitespace-nowrap"
+                className="bg-[#02b5e7] hover:bg-[#0099cc] whitespace-nowrap"
               >
                 Buka Akun Live
               </OpenAccountButton>

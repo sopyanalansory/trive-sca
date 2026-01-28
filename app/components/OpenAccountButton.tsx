@@ -17,6 +17,7 @@ export default function OpenAccountButton({
   const defaultClasses = "bg-[#69d7f6] hover:bg-[#5bc7e6]";
   
   // If custom className is provided, use it (must include bg and hover:bg); otherwise use default
+  // Custom className should come last to ensure proper override
   const finalClassName = className.trim()
     ? `${baseClasses} ${className}` 
     : `${baseClasses} ${defaultClasses}`;

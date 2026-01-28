@@ -36,14 +36,12 @@ function verifyBasicAuth(request: NextRequest): { success: boolean; error?: stri
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const marketUpdateId = parseInt(id);
+    const numericId = parseInt(id, 10);
+    const isNumericId = !isNaN(numericId) && id === numericId.toString();
 
-    if (isNaN(marketUpdateId)) {
-      return NextResponse.json(
-        { success: false, error: 'ID tidak valid' },
-        { status: 400 }
-      );
-    }
+    // Tentukan apakah update berdasarkan kolom id (numerik) atau salesforce_id (string)
+    const identifierColumn = isNumericId ? 'id' : 'salesforce_id';
+    const identifierValue: number | string = isNumericId ? numericId : id;
 
     const result = await pool.query(
       `SELECT 
@@ -58,6 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         economic_data_3,
         economic_data_4,
         economic_data_5,
+        meta_text,
         created_by,
         salesforce_id,
         created_at,
@@ -121,14 +120,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       economic_data_3,
       economic_data_4,
       economic_data_5,
+      meta_text,
       created_by,
       salesforce_id
     } = body;
 
-    // Check if market update exists
+    // Check if market update exists (by id atau salesforce_id)
     const existingResult = await pool.query(
-      'SELECT id FROM market_updates WHERE id = $1',
-      [marketUpdateId]
+      `SELECT id FROM market_updates WHERE ${identifierColumn} = $1`,
+      [identifierValue]
     );
 
     if (existingResult.rows.length === 0) {
@@ -239,6 +239,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       paramIndex++;
     }
 
+    if (meta_text !== undefined) {
+      updates.push(`meta_text = $${paramIndex}`);
+      values.push(meta_text || null);
+      paramIndex++;
+    }
+
     if (created_by !== undefined) {
       if (!created_by.trim()) {
         return NextResponse.json(
@@ -270,14 +276,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Add ID to values
-    values.push(marketUpdateId);
+    // Add identifier (id atau salesforce_id) ke values
+    values.push(identifierValue);
 
     const updateQuery = `
       UPDATE market_updates 
       SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, created_by, salesforce_id, created_at, updated_at
+      WHERE ${identifierColumn} = $${paramIndex}
+      RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at
     `;
 
     const result = await pool.query(updateQuery, values);

@@ -14,7 +14,8 @@
     "import-platforms": "tsx scripts/import-platforms-from-csv.ts",
     "migrate-platform": "tsx lib/run-platform-migration.ts",
     "migrate-deposit-withdrawal": "tsx lib/run-deposit-withdrawal-migration.ts",
-    "migrate-add-type": "tsx lib/run-add-type-migration.ts"
+    "migrate-add-type": "tsx lib/run-add-type-migration.ts",
+    "migrate-meta-text": "tsx lib/run-meta-text-migration.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
