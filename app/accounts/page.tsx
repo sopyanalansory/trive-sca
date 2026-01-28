@@ -50,6 +50,14 @@ export default function AccountsPage() {
   });
   const router = useRouter();
 
+  // Check if user has live account
+  const hasLiveAccount = () => {
+    return accounts.some(
+      (account) => account.type?.toLowerCase() === "live"
+    );
+  };
+
+
   // Data slider - nanti akan diisi dari API
   const [slidesData, setSlidesData] = useState<SlideData[]>([
     {
@@ -88,14 +96,15 @@ export default function AccountsPage() {
     } else {
       // Fetch user data
       fetchUserData(token);
-      // Fetch accounts
-      fetchAccounts();
     }
   }, [router]);
 
-  // Refetch accounts when tab changes
+  // Fetch accounts when component mounts and when tab changes
   useEffect(() => {
-    fetchAccounts();
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetchAccounts();
+    }
   }, [activeTab]);
 
   // Auto-slide untuk mobile (gambar dalam slide)
@@ -331,18 +340,19 @@ export default function AccountsPage() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden">
-        {/* Top Banner */}
-        {/* <div className="bg-[#cdf0f7] px-4 lg:px-8 py-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
-          <p className="text-black text-sm text-left">
-            Anda belum memiliki akun live. Hanya butuh beberapa menit untuk membuat akun live. Mulai trading dengan Trive Invest.
-          </p>
-          <button className="bg-[#2b2c24] text-white px-4 lg:px-6 py-2 rounded-lg font-medium hover:bg-[#1a1b1c] transition-colors whitespace-nowrap">
-            Buka Akun Live
-          </button>
-        </div> */}
-
         {/* Content Area */}
         <div className="flex-1 p-4 lg:p-8 overflow-x-hidden min-h-0">
+          {/* Top Banner - Only show if user doesn't have live account */}
+          {!loadingAccounts && !hasLiveAccount() && (
+            <div className="bg-[#cdf0f7] px-4 lg:px-8 py-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 rounded-lg mb-4 lg:mb-6">
+              <p className="text-black text-sm text-left">
+                Anda belum memiliki akun live. Hanya butuh beberapa menit untuk membuat akun live. Mulai trading dengan Trive Invest.
+              </p>
+              <button className="bg-[#02b5e7] text-white px-4 lg:px-6 py-2 rounded-full text-sm font-medium hover:bg-[#0099cc] transition-colors whitespace-nowrap">
+                Buka Akun Live
+              </button>
+            </div>
+          )}
           {/* Breadcrumb */}
           <div className="mb-4">
             <p className="text-sm text-gray-600">Dasbor / Akun</p>
@@ -763,6 +773,7 @@ export default function AccountsPage() {
                   <table className="w-full min-w-[800px]">
                     <thead>
                       <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[80px]">Type</th>
                         <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[120px]">Account Type</th>
                         <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[100px]">Platform</th>
                         <th className="text-left py-3 px-2 lg:px-4 text-xs lg:text-sm font-semibold text-gray-700 whitespace-nowrap min-w-[80px]">Login</th>
@@ -773,16 +784,25 @@ export default function AccountsPage() {
                     <tbody>
                       {accounts.map((account) => (
                         <tr key={account.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              account.type?.toLowerCase() === "live" 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-gray-100 text-gray-800"
+                            }`}>
+                              {account.type || "Demo"}
+                            </span>
+                          </td>
                           <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.accountType}</td>
                           {/* <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.platform}</td> */}
                           <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">MetaTrader 5</td>
                           <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.login}</td>
-                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">TriveInvest-MT5-Live</td>
+                          <td className="py-3 px-2 lg:px-4 text-xs lg:text-sm text-gray-900 whitespace-nowrap">{account.serverName || "TriveInvest-MT5-Live"}</td>
                           <td className="py-3 px-2 lg:px-4 whitespace-nowrap">
                             <button
                               onClick={() => handleResetPassword(account.id)}
                               disabled={resettingPassword === account.id}
-                              className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-medium text-white bg-[#69d7f6] rounded hover:bg-[#5bc7e6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              className="px-4 py-2 text-xs font-medium text-white bg-black rounded-full hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                             >
                               {resettingPassword === account.id ? "Mengirim..." : "Reset Password"}
                             </button>

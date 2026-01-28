@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
         server_name,
         status,
         currency,
-        leverage
+        leverage,
+        type
       FROM platforms 
       WHERE user_id = $1
       ORDER BY created_at DESC`,
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
 
     const accounts = result.rows.map((row) => ({
       id: row.id,
+      type: row.type || 'Demo',
       accountType: row.account_type || '-',
       platform: row.client_group_name || row.server_name?.split('-')[0] || '-',
       login: row.login_number,

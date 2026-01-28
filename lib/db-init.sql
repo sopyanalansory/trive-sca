@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS platforms (
   currency VARCHAR(10) NOT NULL DEFAULT 'USD',
   leverage VARCHAR(50),
   swap_free VARCHAR(10) NOT NULL DEFAULT 'Tidak',
+  type VARCHAR(20) DEFAULT 'Live',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -101,6 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_platforms_platform_registration_id ON platforms(p
 CREATE INDEX IF NOT EXISTS idx_platforms_login_number ON platforms(login_number);
 CREATE INDEX IF NOT EXISTS idx_platforms_status ON platforms(status);
 CREATE INDEX IF NOT EXISTS idx_platforms_server_name ON platforms(server_name);
+CREATE INDEX IF NOT EXISTS idx_platforms_type ON platforms(type);
 
 -- Trigger to automatically update updated_at for platforms
 DROP TRIGGER IF EXISTS update_platforms_updated_at ON platforms;
@@ -109,4 +111,5 @@ CREATE TRIGGER update_platforms_updated_at BEFORE UPDATE ON platforms
 
 -- Add comment to platforms table
 COMMENT ON TABLE platforms IS 'Platform trading accounts linked to users via account_id';
+COMMENT ON COLUMN platforms.type IS 'Account type: Live or Demo';
 
