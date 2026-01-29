@@ -62,8 +62,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         created_at,
         updated_at
       FROM market_updates 
-      WHERE id = $1`,
-      [marketUpdateId]
+      WHERE ${identifierColumn} = $1`,
+      [identifierValue]
     );
 
     if (result.rows.length === 0) {
@@ -99,14 +99,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const marketUpdateId = parseInt(id);
-
-    if (isNaN(marketUpdateId)) {
+    if (!id || !id.trim()) {
       return NextResponse.json(
         { success: false, error: 'ID tidak valid' },
         { status: 400 }
       );
     }
+    const numericId = parseInt(id, 10);
+    const isNumericId = !isNaN(numericId) && id === numericId.toString();
+    const identifierColumn = isNumericId ? 'id' : 'salesforce_id';
+    const identifierValue: number | string = isNumericId ? numericId : id;
 
     const body = await request.json();
     const { 
