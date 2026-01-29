@@ -96,14 +96,18 @@ export default function OpenInvestmentAccountPage() {
     }
   };
 
-  // Handle form submission
+  // Handle form submission: save selection and go to step Informasi Pribadi
   const handleSubmit = () => {
     if (!hasSelectedProducts || !isConfirmed) {
-      // Show error or validation message
       return;
     }
-    // TODO: Handle form submission - navigate to next step or submit to API
-    console.log("Selected products:", selectedProducts);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "openAccountSelectedProducts",
+        JSON.stringify(selectedProducts)
+      );
+    }
+    router.push("/open-investment-account/personal-info");
   };
 
   return (
