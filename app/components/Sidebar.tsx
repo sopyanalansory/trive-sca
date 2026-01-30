@@ -237,6 +237,35 @@ export default function Sidebar({
                 </div>
               </span>
             </li>
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem("token");
+                  router.push("/login");
+                }}
+                className={`flex items-center ${sidebarOpen ? "justify-start" : "justify-center"} w-full p-3 rounded-lg text-gray-300 hover:bg-[#334155] hover:text-white transition-colors text-left`}
+              >
+                <div className="flex items-center gap-3">
+                  <svg
+                    className="w-5 h-5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  {sidebarOpen && (
+                    <span className="text-sm font-medium">Keluar</span>
+                  )}
+                </div>
+              </button>
+            </li>
           </ul>
         </nav>
 

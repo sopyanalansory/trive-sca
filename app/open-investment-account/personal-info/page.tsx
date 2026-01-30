@@ -6,20 +6,7 @@ import { buildApiUrl } from "@/lib/api-client";
 import Sidebar from "../../components/Sidebar";
 import Footer from "../../components/Footer";
 import WhatsAppButton from "../../components/WhatsAppButton";
-
-const currentStep = 2;
-const totalSteps = 9;
-const steps = [
-  "Verifikasi Identitas",
-  "Informasi Pribadi",
-  "Profil Perusahaan",
-  "Pernyataan Pengalaman Demo",
-  "Pernyataan Pengalaman Transaksi",
-  "Pernyataan Pengungkapan",
-  "Aplikasi Pembukaan Rekening Transaksi Secara Elektronik Online",
-  "Pernyataan Tambahan",
-  "Atur Akun Anda",
-];
+import OpenAccountStepProgress from "../../components/OpenAccountStepProgress";
 
 interface UserPrefill {
   id: string;
@@ -30,6 +17,15 @@ interface UserPrefill {
 }
 
 interface FormData {
+  name: string;
+  email: string;
+  phone: string;
+  countryCode: string;
+  kewarganegaraan: string;
+  nomorKartuIdentitas: string;
+  jenisKelamin: string;
+  tanggalLahir: string;
+  statusPerkawinan: string;
   tempatLahir: string;
   namaGadisIbu: string;
   alamatRumah: string;
@@ -38,6 +34,7 @@ interface FormData {
   noTelpRumah: string;
   noFax: string;
   statusRumah: string;
+  negaraAsalWna: string;
 }
 
 export default function PersonalInfoPage() {
@@ -49,6 +46,15 @@ export default function PersonalInfoPage() {
   const [userPrefill, setUserPrefill] = React.useState<UserPrefill | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [formData, setFormData] = React.useState<FormData>({
+    name: "",
+    email: "",
+    phone: "",
+    countryCode: "",
+    kewarganegaraan: "Indonesia",
+    nomorKartuIdentitas: "",
+    jenisKelamin: "",
+    tanggalLahir: "",
+    statusPerkawinan: "",
     tempatLahir: "",
     namaGadisIbu: "",
     alamatRumah: "",
@@ -57,8 +63,17 @@ export default function PersonalInfoPage() {
     noTelpRumah: "",
     noFax: "",
     statusRumah: "",
+    negaraAsalWna: "Indonesia",
   });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [fotoKtp, setFotoKtp] = React.useState<File | null>(null);
+  const [fotoSelfie, setFotoSelfie] = React.useState<File | null>(null);
+  const [previewKtp, setPreviewKtp] = React.useState<string | null>(null);
+  const [previewSelfie, setPreviewSelfie] = React.useState<string | null>(null);
+  const [panduanModal, setPanduanModal] = React.useState<"ktp" | "selfie" | null>(null);
+
+  const inputFotoRef = React.useRef<HTMLInputElement>(null);
+  const inputSelfieRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -90,16 +105,25 @@ export default function PersonalInfoPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.user) {
+          const u = data.user;
           setUserPrefill({
-            id: data.user.id ?? "",
-            name: data.user.name ?? "",
-            email: data.user.email ?? "",
-            phone: data.user.phone ?? "",
-            countryCode: data.user.countryCode ?? null,
+            id: u.id ?? "",
+            name: u.name ?? "",
+            email: u.email ?? "",
+            phone: u.phone ?? "",
+            countryCode: u.countryCode ?? null,
           });
-          if (data.user.name) {
-            setUserName(data.user.name.toUpperCase());
-            setUserInitial(data.user.name.charAt(0).toUpperCase());
+          setFormData((prev) => ({
+            ...prev,
+            name: u.name ?? "",
+            email: u.email ?? "",
+            phone: [u.countryCode, u.phone].filter(Boolean).join("") || "",
+            countryCode: u.countryCode ?? prev.countryCode ?? "",
+            kewarganegaraan: prev.kewarganegaraan || "Indonesia",
+          }));
+          if (u.name) {
+            setUserName(u.name.toUpperCase());
+            setUserInitial(u.name.charAt(0).toUpperCase());
           }
         }
       } else if (response.status === 401) {
@@ -114,18 +138,84 @@ export default function PersonalInfoPage() {
     }
   };
 
+  const handleFileKtp = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setErrors((prev) => ({ ...prev, fotoKtp: "Pilih file gambar (JPG, PNG)." }));
+        return;
+      }
+      if (previewKtp) URL.revokeObjectURL(previewKtp);
+      setFotoKtp(file);
+      setPreviewKtp(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, fotoKtp: "" }));
+    }
+    e.target.value = "";
+  };
+
+  const handleFileSelfie = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setErrors((prev) => ({ ...prev, fotoSelfie: "Pilih file gambar (JPG, PNG)." }));
+        return;
+      }
+      if (previewSelfie) URL.revokeObjectURL(previewSelfie);
+      setFotoSelfie(file);
+      setPreviewSelfie(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, fotoSelfie: "" }));
+    }
+    e.target.value = "";
+  };
+
+  const clearFotoKtp = () => {
+    if (previewKtp) URL.revokeObjectURL(previewKtp);
+    setFotoKtp(null);
+    setPreviewKtp(null);
+    setErrors((prev) => ({ ...prev, fotoKtp: "" }));
+    if (inputFotoRef.current) inputFotoRef.current.value = "";
+  };
+
+  const clearFotoSelfie = () => {
+    if (previewSelfie) URL.revokeObjectURL(previewSelfie);
+    setFotoSelfie(null);
+    setPreviewSelfie(null);
+    setErrors((prev) => ({ ...prev, fotoSelfie: "" }));
+    if (inputSelfieRef.current) inputSelfieRef.current.value = "";
+  };
+
+  const previewKtpRef = React.useRef<string | null>(null);
+  const previewSelfieRef = React.useRef<string | null>(null);
+  previewKtpRef.current = previewKtp;
+  previewSelfieRef.current = previewSelfie;
+  React.useEffect(() => {
+    return () => {
+      if (previewKtpRef.current) URL.revokeObjectURL(previewKtpRef.current);
+      if (previewSelfieRef.current) URL.revokeObjectURL(previewSelfieRef.current);
+    };
+  }, []);
+
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+    if (field === "name") {
+      setUserName(value ? value.toUpperCase() : "");
+      setUserInitial(value ? value.charAt(0).toUpperCase() : "M");
+    }
   };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = "Bagian ini diperlukan.";
+    if (!formData.email.trim()) newErrors.email = "Bagian ini diperlukan.";
+    if (!formData.phone.trim()) newErrors.phone = "Bagian ini diperlukan.";
     if (!formData.tempatLahir.trim()) newErrors.tempatLahir = "Bagian ini diperlukan.";
     if (!formData.namaGadisIbu.trim()) newErrors.namaGadisIbu = "Bagian ini diperlukan.";
     if (!formData.alamatRumah.trim()) newErrors.alamatRumah = "Bagian ini diperlukan.";
     if (!formData.namaPasangan.trim()) newErrors.namaPasangan = "Bagian ini diperlukan.";
     if (!formData.statusRumah.trim()) newErrors.statusRumah = "Bagian ini diperlukan.";
+    if (!fotoKtp) newErrors.fotoKtp = "Upload foto KTP diperlukan.";
+    if (!fotoSelfie) newErrors.fotoSelfie = "Upload foto selfie diperlukan.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -136,9 +226,7 @@ export default function PersonalInfoPage() {
     router.push("/open-investment-account/company-profile");
   };
 
-  const displayPhone = userPrefill
-    ? [userPrefill.countryCode, userPrefill.phone].filter(Boolean).join("") || "-"
-    : "-";
+  const displayPhone = formData.phone;
 
   const inputBase =
     "w-full px-2.5 py-2 rounded-md border border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:ring-1 focus:ring-[#00C2FF]/30 focus:border-[#00C2FF]";
@@ -170,70 +258,7 @@ export default function PersonalInfoPage() {
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden min-h-0 bg-gray-100">
         <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col">
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1">
-            {/* Step progress - gray mentok kiri (negative margin + padding agar isi tetap rapi) */}
-            <div className="hidden lg:flex flex-col w-64 flex-shrink-0 bg-gray-100 py-6 min-h-full self-stretch lg:-ml-8 lg:pl-8 pr-6">
-              <div className="w-20 h-20 mx-auto mb-6 relative flex items-center justify-center">
-                <svg className="w-20 h-20" viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r="36" stroke="#e5e7eb" strokeWidth="8" fill="none" />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="#ff9000"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeDasharray={2 * Math.PI * 36}
-                    strokeDashoffset={2 * Math.PI * 36 * (1 - currentStep / totalSteps)}
-                    strokeLinecap="round"
-                    transform="rotate(-90 40 40)"
-                  />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[15px] font-semibold text-gray-800">
-                  {currentStep}/{totalSteps}
-                </span>
-              </div>
-              <nav className="space-y-0.5">
-                {steps.map((step, idx) => {
-                  const isCompleted = idx < currentStep - 1;
-                  const isActive = idx === currentStep - 1;
-                  return (
-                    <div
-                      key={step}
-                      className="flex items-center gap-3 py-2.5"
-                    >
-                      <span
-                        className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ${
-                          isCompleted ? "bg-[#4fc3f7]" : isActive ? "bg-[#ff9000]" : "bg-gray-200"
-                        }`}
-                      >
-                        {isCompleted ? "✓" : ""}
-                      </span>
-                      <span
-                        className={`text-[13px] leading-snug ${
-                          isActive ? "font-medium text-gray-800" : isCompleted ? "text-gray-600" : "text-gray-400"
-                        }`}
-                      >
-                        {step}
-                      </span>
-                    </div>
-                  );
-                })}
-              </nav>
-            </div>
-
-            {/* Mobile: progress bar + step counter */}
-            <div className="lg:hidden mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <h1 className="text-[15px] font-semibold text-gray-800">Informasi Pribadi</h1>
-                <span className="text-[13px] font-medium text-gray-600">{currentStep}/{totalSteps}</span>
-              </div>
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#ff9000] rounded-full transition-all"
-                  style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-                />
-              </div>
-            </div>
+            <OpenAccountStepProgress currentStep={1} mobileTitle="Informasi Pribadi" />
 
             {/* Form - section Informasi Pribadi (compact & clean) */}
             <div className="flex-1 min-w-0 bg-white py-5 px-5 lg:py-6 lg:px-6">
@@ -252,44 +277,182 @@ export default function PersonalInfoPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>No Telepon</label>
-                    <input className={`${inputBase} ${inputDisabled}`} value={displayPhone} disabled readOnly />
+                    <input
+                      className={`${inputBase} ${inputEditable}`}
+                      value={displayPhone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      placeholder="Contoh: 628123456789"
+                    />
+                    {errors.phone && <p className={errorClass}>{errors.phone}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Email</label>
-                    <input className={`${inputBase} ${inputDisabled}`} value={userPrefill?.email ?? ""} disabled readOnly />
+                    <input
+                      className={`${inputBase} ${inputEditable}`}
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      placeholder="email@contoh.com"
+                    />
+                    {errors.email && <p className={errorClass}>{errors.email}</p>}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Nama lengkap</label>
-                    <input className={`${inputBase} ${inputDisabled}`} value={userPrefill?.name ? userPrefill.name.toUpperCase() : ""} disabled readOnly />
+                    <input
+                      className={`${inputBase} ${inputEditable}`}
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      placeholder="Nama lengkap"
+                    />
+                    {errors.name && <p className={errorClass}>{errors.name}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Kewarganegaraan</label>
-                    <input className={`${inputBase} ${inputDisabled}`} value="Indonesia" disabled readOnly />
+                    <select
+                      className={`${inputBase} ${inputEditable}`}
+                      value={formData.kewarganegaraan}
+                      onChange={(e) => handleInputChange("kewarganegaraan", e.target.value)}
+                    >
+                      <option value="Indonesia">Indonesia</option>
+                      <option value="Lainnya">Lainnya</option>
+                    </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Nomor Kartu identitas</label>
-                    <input className={`${inputBase} ${inputEditable}`} placeholder="Isi sesuai KTP" />
+                    <input
+                      className={`${inputBase} ${inputEditable}`}
+                      placeholder="Isi sesuai KTP"
+                      value={formData.nomorKartuIdentitas}
+                      onChange={(e) => handleInputChange("nomorKartuIdentitas", e.target.value)}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Jenis Kelamin</label>
                     <div className="flex gap-4 mt-1.5">
-                      <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                        <input type="radio" name="jenis_kelamin" value="Pria" className="accent-[#00C2FF] w-3.5 h-3.5" /> Pria
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                        <input type="radio" name="jenis_kelamin" value="Wanita" className="accent-[#00C2FF] w-3.5 h-3.5" /> Wanita
-                      </label>
+                      {["Pria", "Wanita"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="jenis_kelamin"
+                            value={opt}
+                            checked={formData.jenisKelamin === opt}
+                            onChange={() => handleInputChange("jenisKelamin", opt)}
+                            className="accent-[#00C2FF] w-3.5 h-3.5"
+                          />{" "}
+                          {opt}
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </div>
+
+                {/* Upload Foto KTP & Selfie */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={labelClass}>Foto KTP</label>
+                      <button
+                        type="button"
+                        onClick={() => setPanduanModal("ktp")}
+                        className="text-[11px] font-medium text-[#00C2FF] hover:underline"
+                      >
+                        Lihat panduan
+                      </button>
+                    </div>
+                    <input
+                      ref={inputFotoRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      className="hidden"
+                      onChange={handleFileKtp}
+                    />
+                    <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50 min-h-[100px]">
+                      {previewKtp ? (
+                        <div className="relative">
+                          <img src={previewKtp} alt="Preview KTP" className="w-full h-40 object-contain bg-white" />
+                          <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-2 py-1.5 bg-black/50 text-white text-[11px]">
+                            <span className="truncate">{fotoKtp?.name}</span>
+                            <button type="button" onClick={clearFotoKtp} className="text-white hover:underline ml-2">
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => inputFotoRef.current?.click()}
+                          className="w-full min-h-[100px] flex flex-col items-center justify-center gap-1 text-gray-500 hover:bg-gray-100 transition-colors p-4 text-xs"
+                        >
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>Klik untuk upload foto KTP</span>
+                          <span className="text-[10px] text-gray-400">JPG atau PNG</span>
+                        </button>
+                      )}
+                    </div>
+                    {errors.fotoKtp && <p className={errorClass}>{errors.fotoKtp}</p>}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={labelClass}>Foto Selfie</label>
+                      <button
+                        type="button"
+                        onClick={() => setPanduanModal("selfie")}
+                        className="text-[11px] font-medium text-[#00C2FF] hover:underline"
+                      >
+                        Lihat panduan
+                      </button>
+                    </div>
+                    <input
+                      ref={inputSelfieRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      className="hidden"
+                      onChange={handleFileSelfie}
+                    />
+                    <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50 min-h-[100px]">
+                      {previewSelfie ? (
+                        <div className="relative">
+                          <img src={previewSelfie} alt="Preview Selfie" className="w-full h-40 object-contain bg-white" />
+                          <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-2 py-1.5 bg-black/50 text-white text-[11px]">
+                            <span className="truncate">{fotoSelfie?.name}</span>
+                            <button type="button" onClick={clearFotoSelfie} className="text-white hover:underline ml-2">
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => inputSelfieRef.current?.click()}
+                          className="w-full min-h-[100px] flex flex-col items-center justify-center gap-1 text-gray-500 hover:bg-gray-100 transition-colors p-4 text-xs"
+                        >
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>Klik untuk upload foto selfie</span>
+                          <span className="text-[10px] text-gray-400">JPG atau PNG</span>
+                        </button>
+                      )}
+                    </div>
+                    {errors.fotoSelfie && <p className={errorClass}>{errors.fotoSelfie}</p>}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Tanggal Lahir</label>
-                    <input className={`${inputBase} ${inputEditable}`} placeholder="DD/MM/YYYY" />
+                    <input
+                      className={`${inputBase} ${inputEditable}`}
+                      placeholder="DD/MM/YYYY"
+                      value={formData.tanggalLahir}
+                      onChange={(e) => handleInputChange("tanggalLahir", e.target.value)}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Tempat Lahir</label>
@@ -307,7 +470,15 @@ export default function PersonalInfoPage() {
                     <div className="flex flex-wrap gap-4 mt-1.5">
                       {["Menikah", "Lajang", "Janda/Duda"].map((opt) => (
                         <label key={opt} className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                          <input type="radio" name="status_perkawinan" value={opt} className="accent-[#00C2FF] w-3.5 h-3.5" /> {opt}
+                          <input
+                            type="radio"
+                            name="status_perkawinan"
+                            value={opt}
+                            checked={formData.statusPerkawinan === opt}
+                            onChange={() => handleInputChange("statusPerkawinan", opt)}
+                            className="accent-[#00C2FF] w-3.5 h-3.5"
+                          />{" "}
+                          {opt}
                         </label>
                       ))}
                     </div>
@@ -347,7 +518,11 @@ export default function PersonalInfoPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>Negara Asal (bagi WNA)</label>
-                        <select className={`${inputBase} ${inputDisabled}`} disabled>
+                        <select
+                          className={`${inputBase} ${inputEditable}`}
+                          value={formData.negaraAsalWna}
+                          onChange={(e) => handleInputChange("negaraAsalWna", e.target.value)}
+                        >
                           <option value="Indonesia">Indonesia</option>
                           <option value="Lainnya">Lainnya</option>
                         </select>
@@ -418,6 +593,101 @@ export default function PersonalInfoPage() {
       </main>
 
       <WhatsAppButton />
+
+      {/* Modal Panduan KTP / Selfie */}
+      {panduanModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setPanduanModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-[900px] w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-8 py-4 flex items-center justify-between rounded-t-2xl z-10">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">
+                {panduanModal === "ktp" ? "Panduan Foto KTP" : "Panduan Foto Selfie"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPanduanModal(null)}
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                aria-label="Tutup"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 sm:p-8">
+              <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+                {/* Gambar */}
+                <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-4 sm:gap-0 sm:flex-col items-center sm:items-start shrink-0">
+                  {panduanModal === "ktp" ? (
+                    <>
+                      <img
+                        src="https://cdn2.triveinvest.co.id/assets/img/sca/guideline_document_identity_correct_2x.png"
+                        alt="KTP Benar"
+                        className="w-full max-w-[260px] rounded-xl"
+                      />
+                      <img
+                        src="https://cdn2.triveinvest.co.id/assets/img/sca/guideline_document_identity_wrong_2x.png"
+                        alt="KTP Salah"
+                        className="w-full max-w-[260px] rounded-xl"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src="https://cdn2.triveinvest.co.id/assets/img/sca/selfie_bener.png"
+                        alt="Selfie Benar"
+                        className="w-full max-w-[260px] h-[170px] object-contain rounded-xl"
+                      />
+                      <img
+                        src="https://cdn2.triveinvest.co.id/assets/img/sca/selfie_salah.png"
+                        alt="Selfie Salah"
+                        className="w-full max-w-[260px] h-[170px] object-contain rounded-xl"
+                      />
+                    </>
+                  )}
+                </div>
+                {/* Panduan */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-3">
+                    {panduanModal === "ktp" ? "Tata Cara Foto KTP" : "Tata Cara Foto Selfie"}
+                  </h3>
+                  <ul className="text-xs sm:text-sm text-gray-700 list-disc pl-5 space-y-1.5">
+                    {panduanModal === "ktp" ? (
+                      <>
+                        <li>Pastikan foto KTP ada di dalam bingkai dan tidak terpotong</li>
+                        <li>Informasi di KTP harus jelas, tidak buram, atau memantulkan cahaya</li>
+                        <li>Pastikan KTP milik Anda sendiri, bukan orang lain</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Gunakan pakaian rapi & sopan saat mengambil selfie</li>
+                        <li>Pastikan wajah terlihat jelas, tidak buram atau gelap</li>
+                        <li>Jangan gunakan filter, kacamata hitam, atau aksesoris berlebihan</li>
+                        <li>Ambil foto di tempat dengan pencahayaan cukup</li>
+                        <li>Pastikan wajah memenuhi bingkai sesuai arahan</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPanduanModal(null)}
+                  className="bg-[#69d7f6] hover:bg-[#5bc7e6] text-white px-5 py-2 rounded-full text-xs font-medium transition-colors"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
