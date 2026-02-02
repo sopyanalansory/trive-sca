@@ -15,6 +15,11 @@ const inputBase =
 const inputDisabled = "bg-gray-50 text-gray-600 cursor-not-allowed";
 const labelClass = "block text-xs font-medium text-gray-600 mb-1";
 
+function formatDateNow() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
 export default function CompanyProfilePage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,6 +27,7 @@ export default function CompanyProfilePage() {
   const [userName, setUserName] = useState("");
   const [userInitial, setUserInitial] = useState("M");
   const [accepted, setAccepted] = useState("");
+  const [tanggalPenerimaan] = useState(() => formatDateNow());
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -170,7 +176,7 @@ export default function CompanyProfilePage() {
                 </div>
                 <div className="mb-4">
                   <label className={labelClass}>Tanggal Penerimaan:</label>
-                  <input className={`${inputBase} ${inputDisabled}`} value="23/05/2025" disabled />
+                  <input className={`${inputBase} ${inputDisabled}`} value={tanggalPenerimaan} disabled readOnly />
                 </div>
                 <div className="flex flex-wrap gap-3 justify-between pt-2">
                   <button type="button" onClick={handleBack} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[110px]">

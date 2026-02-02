@@ -146,42 +146,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     let paramIndex = 1;
 
     if (research_type !== undefined) {
-      // Validate research_type
-      const validResearchTypes = [
-        'Daily Analysis/Strategy',
-        'Trading Signal (Trading Central)',
-        'Technical Sentiment (TradingView)',
-      ];
-      
-      if (!validResearchTypes.includes(research_type)) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `Research type tidak valid. Pilihan: ${validResearchTypes.join(', ')}` 
-          },
-          { status: 400 }
-        );
-      }
-      
       updates.push(`research_type = $${paramIndex}`);
       values.push(research_type);
       paramIndex++;
     }
 
     if (status !== undefined) {
-      // Validate status
-      const validStatuses = ['Draft', 'Published', 'Archived'];
-      
-      if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `Status tidak valid. Pilihan: ${validStatuses.join(', ')}` 
-          },
-          { status: 400 }
-        );
-      }
-      
       updates.push(`status = $${paramIndex}`);
       values.push(status);
       paramIndex++;
