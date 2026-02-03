@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
     
     if (status) {
-      conditions.push(`status = $${paramIndex}`);
+      conditions.push(`LOWER(status) = LOWER($${paramIndex})`);
       values.push(status);
       paramIndex++;
     }
