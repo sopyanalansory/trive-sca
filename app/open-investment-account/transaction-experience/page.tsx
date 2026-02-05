@@ -106,18 +106,18 @@ export default function TransactionExperiencePage() {
       />
 
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden min-h-0 bg-gray-100">
-        <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col">
-          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1">
+        <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col w-full">
+          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1 w-full min-w-0 open-account-content-wrap">
             <OpenAccountStepProgress currentStep={5} mobileTitle="Pernyataan Pengalaman Transaksi" />
 
-            <div className="flex-1 min-w-0 bg-white py-5 px-5 lg:py-6 lg:px-6">
+            <div className="flex-1 min-w-0 w-full bg-white rounded-lg overflow-x-hidden px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:px-6 open-account-form-card">
               <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-1">Pernyataan Pengalaman Transaksi</h2>
               <p className="text-xs text-gray-500 mb-5">
                 PERNYATAAN TELAH BERPENGALAMAN MELAKSANAKAN TRANSAKSI PERDAGANGAN BERJANGKA KOMODITI
               </p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-4 w-full min-w-0 max-w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Nama lengkap</label>
                     <input
@@ -139,7 +139,7 @@ export default function TransactionExperiencePage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Tanggal Lahir</label>
                     <input
@@ -160,7 +160,7 @@ export default function TransactionExperiencePage() {
                     readOnly
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Kode Pos</label>
                     <input
@@ -224,7 +224,7 @@ export default function TransactionExperiencePage() {
                           value={opt}
                           checked={accepted === opt}
                           onChange={() => handleAcceptedChange(opt)}
-                          className="accent-[#00C2FF] w-3.5 h-3.5"
+                          className="radio-primary"
                         />
                         {opt === "ya" ? "Ya" : "Tidak"}
                       </label>

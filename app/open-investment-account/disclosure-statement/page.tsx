@@ -76,11 +76,11 @@ export default function DisclosureStatementPage() {
       />
 
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden min-h-0 bg-gray-100">
-        <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col">
-          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1">
+        <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col w-full">
+          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1 w-full min-w-0 open-account-content-wrap">
             <OpenAccountStepProgress currentStep={6} mobileTitle="Pernyataan Pengungkapan" />
 
-            <div className="flex-1 min-w-0 bg-white py-5 px-5 lg:py-6 lg:px-6">
+            <div className="flex-1 min-w-0 w-full bg-white rounded-lg overflow-x-hidden px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:px-6 open-account-form-card">
               <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-1">Pernyataan Pengungkapan</h2>
               <p className="text-xs text-gray-500 mt-3 mb-5 text-center">
                 PERNYATAAN PENGUNGKAPAN
@@ -88,7 +88,7 @@ export default function DisclosureStatementPage() {
                 (DISCLOSURE STATEMENT)
               </p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 w-full min-w-0 max-w-full">
                 <ol className="text-xs text-gray-600 pl-5 list-decimal space-y-2.5 mb-6">
                   <li>
                     Perdagangan Berjangka BERISIKO SANGAT TINGGI tidak cocok untuk semua orang. Pastikan bahwa anda SEPENUHNYA MEMAHAMI RISIKO ini sebelum melakukan perdagangan.
@@ -139,7 +139,7 @@ export default function DisclosureStatementPage() {
                           value={opt}
                           checked={accepted === opt}
                           onChange={() => handleAcceptedChange(opt)}
-                          className="accent-[#00C2FF] w-3.5 h-3.5"
+                          className="radio-primary"
                         />
                         {opt === "ya" ? "Ya" : "Tidak"}
                       </label>

@@ -74,6 +74,7 @@ export default function PersonalInfoPage() {
 
   const inputFotoRef = React.useRef<HTMLInputElement>(null);
   const inputSelfieRef = React.useRef<HTMLInputElement>(null);
+  const initialUserLoadedRef = React.useRef(false);
 
   React.useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -113,17 +114,21 @@ export default function PersonalInfoPage() {
             phone: u.phone ?? "",
             countryCode: u.countryCode ?? null,
           });
-          setFormData((prev) => ({
-            ...prev,
-            name: u.name ?? "",
-            email: u.email ?? "",
-            phone: [u.countryCode, u.phone].filter(Boolean).join("") || "",
-            countryCode: u.countryCode ?? prev.countryCode ?? "",
-            kewarganegaraan: prev.kewarganegaraan || "Indonesia",
-          }));
-          if (u.name) {
-            setUserName(u.name.toUpperCase());
-            setUserInitial(u.name.charAt(0).toUpperCase());
+          // Hanya isi form dari API sekali (saat pertama load), supaya user bisa update tanpa tertimpa
+          if (!initialUserLoadedRef.current) {
+            initialUserLoadedRef.current = true;
+            setFormData((prev) => ({
+              ...prev,
+              name: u.name ?? "",
+              email: u.email ?? "",
+              phone: [u.countryCode, u.phone].filter(Boolean).join("") || "",
+              countryCode: u.countryCode ?? prev.countryCode ?? "",
+              kewarganegaraan: prev.kewarganegaraan || "Indonesia",
+            }));
+            if (u.name) {
+              setUserName(u.name.toUpperCase());
+              setUserInitial(u.name.charAt(0).toUpperCase());
+            }
           }
         }
       } else if (response.status === 401) {
@@ -256,25 +261,25 @@ export default function PersonalInfoPage() {
       />
 
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden min-h-0 bg-gray-100">
-        <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col">
-          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1">
+        <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col w-full">
+          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1 w-full min-w-0 open-account-content-wrap">
             <OpenAccountStepProgress currentStep={1} mobileTitle="Informasi Pribadi" />
 
             {/* Form - section Informasi Pribadi (compact & clean) */}
-            <div className="flex-1 min-w-0 bg-white py-5 px-5 lg:py-6 lg:px-6">
+            <div className="flex-1 min-w-0 w-full bg-white rounded-lg overflow-x-hidden px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:px-6 open-account-form-card">
               <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-1">Informasi Pribadi</h2>
               <p className="text-xs text-gray-500 mb-5">
                 Mohon periksa informasi Anda di bawah ini, dan perbarui jika diperlukan. Pastikan sesuai dengan data pada kartu identitas (KTP/Paspor).
               </p>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-4 w-full min-w-0 max-w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Kode Nasabah</label>
                     <input className={`${inputBase} ${inputDisabled}`} value={userPrefill?.id ?? ""} disabled readOnly />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>No Telepon</label>
                     <input
@@ -297,7 +302,7 @@ export default function PersonalInfoPage() {
                     {errors.email && <p className={errorClass}>{errors.email}</p>}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Nama lengkap</label>
                     <input
@@ -320,7 +325,7 @@ export default function PersonalInfoPage() {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Nomor Kartu identitas</label>
                     <input
@@ -341,7 +346,7 @@ export default function PersonalInfoPage() {
                             value={opt}
                             checked={formData.jenisKelamin === opt}
                             onChange={() => handleInputChange("jenisKelamin", opt)}
-                            className="accent-[#00C2FF] w-3.5 h-3.5"
+                            className="radio-primary"
                           />{" "}
                           {opt}
                         </label>
@@ -351,7 +356,7 @@ export default function PersonalInfoPage() {
                 </div>
 
                 {/* Upload Foto KTP & Selfie */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className={labelClass}>Foto KTP</label>
@@ -444,7 +449,7 @@ export default function PersonalInfoPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Tanggal Lahir</label>
                     <input
@@ -464,7 +469,7 @@ export default function PersonalInfoPage() {
                     {errors.tempatLahir && <p className={errorClass}>{errors.tempatLahir}</p>}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                   <div>
                     <label className={labelClass}>Status Perkawinan</label>
                     <div className="flex flex-wrap gap-4 mt-1.5">
@@ -476,7 +481,7 @@ export default function PersonalInfoPage() {
                             value={opt}
                             checked={formData.statusPerkawinan === opt}
                             onChange={() => handleInputChange("statusPerkawinan", opt)}
-                            className="accent-[#00C2FF] w-3.5 h-3.5"
+                            className="radio-primary"
                           />{" "}
                           {opt}
                         </label>
@@ -515,7 +520,7 @@ export default function PersonalInfoPage() {
                       />
                       {errors.alamatRumah && <p className={errorClass}>{errors.alamatRumah}</p>}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                       <div>
                         <label className={labelClass}>Negara Asal (bagi WNA)</label>
                         <select
@@ -536,7 +541,7 @@ export default function PersonalInfoPage() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&>*]:min-w-0">
                       <div>
                         <label className={labelClass}>No Telepon Rumah</label>
                         <input
@@ -565,7 +570,7 @@ export default function PersonalInfoPage() {
                               value={opt}
                               checked={formData.statusRumah === opt}
                               onChange={(e) => handleInputChange("statusRumah", e.target.value)}
-                              className="accent-[#00C2FF] w-3.5 h-3.5"
+                              className="radio-primary"
                             />
                             {opt}
                           </label>

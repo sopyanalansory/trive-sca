@@ -83,8 +83,8 @@ export default function OpenAccountStepProgress({
       {/* Mobile: progress bar + step counter */}
       <div className="lg:hidden mb-6">
         <div className="flex justify-between items-center mb-2">
-          <h1 className="text-[15px] font-semibold text-gray-800">{mobileTitle}</h1>
-          <span className="text-[13px] font-medium text-gray-600">
+          <h1 className="text-[15px] font-semibold text-gray-800 min-w-0 flex-1 mr-2 break-words">{mobileTitle}</h1>
+          <span className="text-[13px] font-medium text-gray-600 flex-shrink-0">
             {currentStep}/{totalSteps}
           </span>
         </div>
