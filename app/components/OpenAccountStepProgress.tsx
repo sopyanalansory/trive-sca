@@ -29,6 +29,9 @@ export default function OpenAccountStepProgress({
 }: OpenAccountStepProgressProps) {
   const totalSteps = OPEN_ACCOUNT_TOTAL_STEPS;
   const steps = OPEN_ACCOUNT_STEPS;
+  const allCompleted = currentStep > totalSteps;
+  const displayStep = allCompleted ? totalSteps : currentStep;
+  const progressPercentage = allCompleted ? 100 : (currentStep / totalSteps) * 100;
 
   return (
     <>
@@ -41,23 +44,23 @@ export default function OpenAccountStepProgress({
               cx="40"
               cy="40"
               r="36"
-              stroke="#ff9000"
+              stroke={allCompleted || currentStep === totalSteps ? "#4fc3f7" : "#ff9000"}
               strokeWidth="8"
               fill="none"
               strokeDasharray={2 * Math.PI * 36}
-              strokeDashoffset={2 * Math.PI * 36 * (1 - currentStep / totalSteps)}
+              strokeDashoffset={allCompleted || currentStep === totalSteps ? 0 : 2 * Math.PI * 36 * (1 - currentStep / totalSteps)}
               strokeLinecap="round"
               transform="rotate(-90 40 40)"
             />
           </svg>
           <span className="absolute inset-0 flex items-center justify-center text-[15px] font-semibold text-gray-800">
-            {currentStep}/{totalSteps}
+            {displayStep}/{totalSteps}
           </span>
         </div>
         <nav className="space-y-0.5">
           {steps.map((step, idx) => {
-            const isCompleted = idx < currentStep - 1;
-            const isActive = idx === currentStep - 1;
+            const isCompleted = allCompleted || idx < currentStep - 1;
+            const isActive = !allCompleted && idx === currentStep - 1;
             return (
               <div key={step} className="flex items-center gap-3 py-2.5">
                 <span
@@ -85,13 +88,13 @@ export default function OpenAccountStepProgress({
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-[15px] font-semibold text-gray-800 min-w-0 flex-1 mr-2 break-words">{mobileTitle}</h1>
           <span className="text-[13px] font-medium text-gray-600 flex-shrink-0">
-            {currentStep}/{totalSteps}
+            {displayStep}/{totalSteps}
           </span>
         </div>
         <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#ff9000] rounded-full transition-all"
-            style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+            className={`h-full rounded-full transition-all ${allCompleted || currentStep === totalSteps ? "bg-[#4fc3f7]" : "bg-[#ff9000]"}`}
+            style={{ width: `${progressPercentage}%` }}
           />
         </div>
       </div>

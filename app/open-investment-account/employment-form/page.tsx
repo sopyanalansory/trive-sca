@@ -231,7 +231,7 @@ export default function EmploymentFormPage() {
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden min-h-0 bg-gray-100">
         <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col w-full">
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1 w-full min-w-0 open-account-content-wrap">
-            <OpenAccountStepProgress currentStep={7} mobileTitle="Aplikasi Pembukaan Rekening Transaksi Secara Elektronik Online" />
+            <OpenAccountStepProgress currentStep={6} mobileTitle="Aplikasi Pembukaan Rekening Transaksi Secara Elektronik Online" />
 
             <div className="flex-1 min-w-0 w-full bg-white rounded-lg overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:px-6 open-account-form-card">
               <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-1">
@@ -434,14 +434,18 @@ export default function EmploymentFormPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/open-investment-account/emergency-contact-form")}
-                    className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[110px]"
+                    className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[130px]"
                   >
                     Kembali
                   </button>
                   <button
                     type="submit"
                     disabled={diterima !== "ya"}
-                    className="bg-[#69d7f6] hover:bg-[#5bc7e6] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-full text-xs font-medium transition-colors min-w-[110px]"
+                    className={`px-4 py-2 rounded-full text-xs min-w-[130px] transition-colors border ${
+                      diterima === "ya"
+                        ? "bg-[#4fc3f7] hover:bg-[#3db3e7] text-white cursor-pointer border-[#4fc3f7] font-bold"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 font-medium"
+                    }`}
                   >
                     Berikutnya
                   </button>

@@ -584,7 +584,7 @@ export default function PersonalInfoPage() {
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    className="bg-[#69d7f6] hover:bg-[#5bc7e6] text-white px-4 py-2 rounded-full text-xs font-medium transition-colors min-w-[110px]"
+                    className="bg-[#4fc3f7] hover:bg-[#3db3e7] text-white px-4 py-2 rounded-full text-xs font-bold transition-colors min-w-[130px] border border-[#4fc3f7] cursor-pointer"
                   >
                     Berikutnya
                   </button>

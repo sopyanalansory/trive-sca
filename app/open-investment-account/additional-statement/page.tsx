@@ -13,7 +13,7 @@ function formatDateNow() {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
-export default function DisclosureStatementPage() {
+export default function AdditionalStatementPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileHovered, setProfileHovered] = React.useState(false);
@@ -21,6 +21,7 @@ export default function DisclosureStatementPage() {
   const [userInitial, setUserInitial] = React.useState("M");
   const [accepted, setAccepted] = React.useState("");
   const [tanggalPenerimaan] = React.useState(() => formatDateNow());
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -51,17 +52,50 @@ export default function DisclosureStatementPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleAcceptedChange = (value: string) => setAccepted(value);
+  const handleAcceptedChange = (value: string) => {
+    setAccepted(value);
+    if (errors.accepted) {
+      setErrors((prev) => ({
+        ...prev,
+        accepted: "",
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!accepted) {
+      newErrors.accepted = "Anda harus memilih Ya atau Tidak.";
+    }
+
+    return newErrors;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/open-investment-account/account-opening-form");
+
+    const formErrors = validateForm();
+
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
+    }
+
+    if (accepted !== "ya") {
+      alert("Anda harus menerima pernyataan untuk melanjutkan");
+      return;
+    }
+
+    // Navigate to next step - adjust route as needed
+    router.push("/open-investment-account/additional-statement-2");
   };
 
   const inputBase =
     "w-full px-2.5 py-2 rounded-md border border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:ring-1 focus:ring-[#00C2FF]/30 focus:border-[#00C2FF]";
   const inputDisabled = "bg-gray-50 text-gray-600 cursor-not-allowed";
   const labelClass = "block text-xs font-medium text-gray-600 mb-1";
+  const errorClass = "text-xs text-red-500 mt-1";
 
   return (
     <div className="min-h-screen bg-white flex relative">
@@ -78,10 +112,10 @@ export default function DisclosureStatementPage() {
       <main className="flex-1 flex flex-col w-full lg:w-auto overflow-x-hidden min-h-0 bg-gray-100">
         <div className="flex-1 p-4 lg:px-8 lg:pt-0 lg:pb-0 overflow-x-hidden min-h-0 flex flex-col w-full">
           <div className="max-w-6xl mx-auto flex flex-col lg:flex-row lg:gap-12 lg:min-h-full flex-1 w-full min-w-0 open-account-content-wrap">
-            <OpenAccountStepProgress currentStep={6} mobileTitle="Pernyataan Pengungkapan" />
+            <OpenAccountStepProgress currentStep={7} mobileTitle="Pernyataan Tambahan" />
 
             <div className="flex-1 min-w-0 w-full bg-white rounded-lg overflow-x-hidden px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:px-6 open-account-form-card">
-              <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-1">Pernyataan Pengungkapan</h2>
+              <h2 className="text-base font-semibold text-gray-900 tracking-tight mb-1">Pernyataan Tambahan</h2>
               <p className="text-xs text-gray-900 mt-3 mb-5 text-center">
                 <span className="font-bold">PERNYATAAN PENGUNGKAPAN</span>
                 <br />
@@ -89,31 +123,51 @@ export default function DisclosureStatementPage() {
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4 w-full min-w-0 max-w-full">
+                {/* Stepper Horizontal */}
+                <div className="flex items-center justify-center gap-6 mb-6 mt-2">
+                  {[...Array(7)].map((_, idx) => (
+                    <div key={idx} className="text-center">
+                      <div
+                        className={`w-8 h-8 rounded-full text-white flex items-center justify-center mx-auto mb-2 font-bold text-sm border-2 ${
+                          idx === 0
+                            ? "bg-[#4fc3f7] border-[#4fc3f7]"
+                            : "bg-gray-200 border-gray-200 text-gray-400"
+                        }`}
+                      >
+                        <span>&#10003;</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 <ol className="text-xs text-gray-600 pl-5 list-decimal space-y-2.5 mb-6">
                   <li>
-                    Perdagangan Berjangka BERISIKO SANGAT TINGGI tidak cocok untuk semua orang. Pastikan bahwa anda SEPENUHNYA MEMAHAMI RISIKO ini sebelum melakukan perdagangan.
+                    Perdagangan Berjangka <b>BERISIKO SANGAT TINGGI</b> tidak cocok untuk semua orang. Pastikan bahwa anda <b>SEPENUHNYA MEMAHAMI RISIKO</b> ini sebelum melakukan perdagangan.
                   </li>
                   <li>
-                    Perdagangan Berjangka merupakan produk keuangan dengan <i>leverage</i> dapat menyebabkan KERUGIAN ANDA MELEBIHI setoran awal Anda. Anda harus siap apabila SELURUH DANA ANDA HABIS.
+                    Perdagangan Berjangka merupakan produk keuangan dengan <i>leverage</i> dan dapat menyebabkan{" "}
+                    <b>KERUGIAN ANDA MELEBIHI</b> setoran awal Anda. Anda harus siap apabila <b>SELURUH DANA ANDA HABIS</b>.
                   </li>
                   <li>
-                    TIDAK ADA PENDAPATAN TETAP (<i>FIXED INCOME</i>) dalam Perdagangan Berjangka.
+                    <b>
+                      TIDAK ADA PENDAPATAN TETAP (<i>FIXED INCOME</i>)
+                    </b>{" "}
+                    dalam Perdagangan Berjangka.
                   </li>
                   <li>
-                    Apabila anda PEMULA kami sarankan untuk mempelajari mekanisme transaksinya, PERDAGANGAN BERJANGKA membutuhkan pengetahuan dan pemahaman khusus.
+                    Apabila anda <b>PEMULA</b> kami sarankan untuk mempelajari mekanisme transaksinya, PERDAGANGAN BERJANGKA membutuhkan pengetahuan dan pemahaman khusus.
                   </li>
                   <li>
-                    ANDA HARUS MELAKUKAN TRANSAKSI SENDIRI, segala risiko yang akan timbul akibat transaksi sepenuhnya akan menjadi tanggung jawab Saudara.
+                    <b>ANDA HARUS MELAKUKAN TRANSAKSI SENDIRI</b>, segala risiko yang akan timbul akibat transaksi sepenuhnya akan menjadi tanggung jawab Saudara.
                   </li>
                   <li>
-                    User Id dan Password BERSIFAT PRIBADI DAN RAHASIA, anda bertanggung jawab atas penggunaannya, JANGAN SERAHKAN ke pihak lain terutama Wakil Pialang Berjangka dan pegawai Pialang Berjangka.
+                    User Id dan Password <b>BERSIFAT PRIBADI DAN RAHASIA</b>, anda bertanggung jawab atas penggunaannya, <b>JANGAN SERAHKAN</b> ke pihak lain terutama Wakil Pialang Berjangka dan pegawai Pialang Berjangka.
                   </li>
                   <li>
-                    ANDA berhak menerima LAPORAN ATAS TRANSAKSI yang anda lakukan. Waktu anda 2 X 24 JAM UNTUK MEMBERIKAN SANGGAHAN. Untuk transaksi yang TELAH SELESAI (<i>DONE/SETTLE</i>) DAPAT ANDA CEK melalui sistem informasi transaksi nasabah yang berfungsi untuk memastikan transaksi anda telah terdaftar di Lembaga Kliring Berjangka.
+                    ANDA berhak menerima <b>LAPORAN ATAS TRANSAKSI</b> yang anda lakukan. Waktu anda 2 X 24 JAM UNTUK MEMBERIKAN SANGGAHAN. Untuk transaksi yang TELAH SELESAI (<i>DONE/SETTLE</i>) DAPAT ANDA CEK melalui sistem informasi transaksi nasabah yang berfungsi untuk memastikan transaksi anda telah terdaftar di Lembaga Kliring Berjangka.
                   </li>
                 </ol>
 
-                <p className="text-xs font-semibold text-gray-700 mb-4">
+                <p className="text-xs font-semibold text-gray-700 mb-4 text-center">
                   SECARA DETAIL BACA DOKUMEN PEMBERITAHUAN ADANYA RISIKO DAN DOKUMEN PERJANJIAN PEMBERIAN AMANAT
                 </p>
                 <p className="text-xs text-gray-600 mb-6">
@@ -122,7 +176,7 @@ export default function DisclosureStatementPage() {
                     href="https://www.bappebti.go.id"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#00C2FF] hover:underline"
+                    className="text-gray-700 hover:underline font-medium"
                   >
                     www.bappebti.go.id
                   </a>
@@ -145,6 +199,7 @@ export default function DisclosureStatementPage() {
                       </label>
                     ))}
                   </div>
+                  {errors.accepted && <p className={errorClass}>{errors.accepted}</p>}
                   <div className="mt-4">
                     <label className={labelClass}>Tanggal Penerimaan:</label>
                     <input
@@ -160,7 +215,7 @@ export default function DisclosureStatementPage() {
                 <div className="flex flex-wrap gap-3 justify-between pt-2">
                   <button
                     type="button"
-                    onClick={() => router.push("/open-investment-account/transaction-experience")}
+                    onClick={() => router.back()}
                     className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[130px]"
                   >
                     Kembali

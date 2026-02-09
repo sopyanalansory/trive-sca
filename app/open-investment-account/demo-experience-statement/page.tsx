@@ -146,10 +146,14 @@ export default function DemoExperienceStatementPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3 justify-between pt-2">
-                  <button type="button" onClick={handleBack} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[110px]">
+                  <button type="button" onClick={handleBack} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[130px]">
                     Kembali
                   </button>
-                  <button type="submit" disabled={accepted !== "ya"} className="bg-[#69d7f6] hover:bg-[#5bc7e6] text-white px-4 py-2 rounded-full text-xs font-medium transition-colors min-w-[110px] disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button type="submit" disabled={accepted !== "ya"} className={`px-4 py-2 rounded-full text-xs min-w-[130px] transition-colors border ${
+                    accepted === "ya"
+                      ? "bg-[#4fc3f7] hover:bg-[#3db3e7] text-white cursor-pointer border-[#4fc3f7] font-bold"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 font-medium"
+                  }`}>
                     Berikutnya
                   </button>
                 </div>

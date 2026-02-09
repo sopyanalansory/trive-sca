@@ -56,7 +56,7 @@ input[type="checkbox"] {
   accent-color: #2563eb;
 }
 
-/* Radio button style profesional - biru */
+/* Radio button style profesional - halus dan elegan */
 input[type="radio"].radio-primary {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -65,25 +65,63 @@ input[type="radio"].radio-primary {
   height: 1rem;
   min-width: 1rem;
   min-height: 1rem;
-  border: 2px solid #e5e7eb;
+  border: 1.5px solid #d1d5db;
   border-radius: 50%;
-  background: #fff;
+  background: #ffffff;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   vertical-align: middle;
+  position: relative;
+  flex-shrink: 0;
 }
 input[type="radio"].radio-primary:hover:not(:disabled) {
-  border-color: #00C2FF;
+  border-color: #93c5fd;
+  background: #ffffff;
 }
 input[type="radio"].radio-primary:checked {
-  border-color: #00C2FF;
-  background: radial-gradient(circle at center, white 35%, #00C2FF 35%);
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+input[type="radio"].radio-primary:checked::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 
+    0 0 0 1px rgba(59, 130, 246, 0.15),
+    0 0 4px rgba(59, 130, 246, 0.2);
 }
 input[type="radio"].radio-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 194, 255, 0.25);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+input[type="radio"].radio-primary:checked:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+input[type="radio"].radio-primary:checked:focus::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  box-shadow: 
+    0 0 0 1px rgba(59, 130, 246, 0.2),
+    0 0 6px rgba(59, 130, 246, 0.25);
 }
 input[type="radio"].radio-primary:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.5;
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+input[type="radio"].radio-primary:disabled:checked {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+input[type="radio"].radio-primary:disabled:checked::before {
+  background: #94a3b8;
+  box-shadow: none;
 }
