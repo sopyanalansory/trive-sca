@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
+// Configure max body size for this route (10MB)
+export const maxDuration = 30;
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     // Get token from Authorization header

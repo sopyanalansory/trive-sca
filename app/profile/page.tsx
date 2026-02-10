@@ -11,31 +11,112 @@ import Sidebar from "../components/Sidebar";
 function ProfilePhotoImage({ src, alt, userInitial, token }: { src: string; alt: string; userInitial: string; token: string }) {
   const [imageSrc, setImageSrc] = useState<string>("");
   const [hasError, setHasError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Cleanup previous blob URL
+    let blobUrl: string | null = null;
+    let isMounted = true;
+
+    // Use token from parent component (same token used for /api/auth/me)
+    // Fallback to localStorage if token prop is empty
+    const getToken = () => {
+      if (token && token.trim()) return token;
+      if (typeof window === "undefined") return null;
+      return localStorage.getItem("token");
+    };
+
+    const actualToken = getToken();
+
     // Fetch image dengan Authorization header
-    if (src && token) {
-      fetch(src, {
+    if (src && actualToken) {
+      setLoading(true);
+      setHasError(false);
+      
+      // Remove query params for the actual fetch URL
+      const photoUrl = src.split('?')[0];
+      
+      // Debug: log token and URL
+      console.log('Fetching profile photo:', { 
+        photoUrl, 
+        hasToken: !!actualToken, 
+        tokenLength: actualToken.length,
+        tokenPreview: actualToken.substring(0, 20) + '...',
+        tokenEnd: '...' + actualToken.substring(actualToken.length - 10)
+      });
+
+      fetch(photoUrl, {
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${actualToken}`,
         },
+        cache: 'no-cache',
       })
         .then((res) => {
-          if (res.ok) {
-            return res.blob();
+          if (!isMounted) return null;
+          
+          console.log('Profile photo response status:', res.status, res.statusText);
+          if (!res.ok) {
+            // Try to get error message
+            return res.text().then(text => {
+              console.error('Profile photo error response:', text);
+              // Compare with /api/auth/me to see if token is same
+              fetch('/api/auth/me', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${actualToken}`,
+                },
+              }).then(meRes => {
+                console.log('Compare /api/auth/me status:', meRes.status);
+                if (meRes.ok) {
+                  console.log('Token works for /api/auth/me but not for profile-photo!');
+                }
+              });
+              throw new Error(`Failed to load image: ${res.status} - ${text}`);
+            });
           }
-          throw new Error("Failed to load image");
+          return res.blob();
         })
         .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          setImageSrc(url);
+          if (!isMounted || !blob) return;
+          
+          blobUrl = URL.createObjectURL(blob);
+          setImageSrc(blobUrl);
           setHasError(false);
+          setLoading(false);
         })
-        .catch(() => {
+        .catch((error) => {
+          if (!isMounted) return;
+          
+          console.error('Error loading profile photo:', error);
           setHasError(true);
+          setLoading(false);
         });
+    } else {
+      console.warn('Profile photo fetch skipped:', { 
+        hasSrc: !!src, 
+        hasToken: !!actualToken,
+        tokenFromStorage: typeof window !== "undefined" ? !!localStorage.getItem("token") : false
+      });
+      setLoading(false);
     }
-  }, [src, token]);
+
+    // Cleanup blob URL on unmount or when src/token changes
+    return () => {
+      isMounted = false;
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [src, token]); // Include token in dependencies to refetch when token changes
+
+  if (loading) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-[#00C2FF] to-[#00B0E6] flex items-center justify-center">
+        <span className="text-4xl font-bold text-white">{userInitial}</span>
+      </div>
+    );
+  }
 
   if (hasError || !imageSrc) {
     return (
@@ -50,7 +131,10 @@ function ProfilePhotoImage({ src, alt, userInitial, token }: { src: string; alt:
       src={imageSrc}
       alt={alt}
       className="w-full h-full object-cover"
-      onError={() => setHasError(true)}
+      onError={() => {
+        console.error('Image load error');
+        setHasError(true);
+      }}
     />
   );
 }
@@ -91,6 +175,7 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileData, string>>>({});
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string>("");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -118,6 +203,9 @@ export default function ProfilePage() {
   const fetchUserData = async (token: string) => {
     try {
       setLoading(true);
+      // Store token for ProfilePhotoImage component
+      setAuthToken(token);
+      
       const response = await fetch(buildApiUrl("/api/auth/me"), {
         method: "GET",
         headers: {
@@ -133,10 +221,9 @@ export default function ProfilePage() {
           setUserName(user.name?.toUpperCase() || "");
           setUserInitial(user.name?.charAt(0).toUpperCase() || "M");
           
-          // Set profile photo if exists
+          // Set profile photo if exists - always use direct endpoint (not proxy)
           if (user.hasProfilePhoto) {
-            // Use token in URL for image src (will be handled by API)
-            setProfilePhotoPreview(buildApiUrl("/api/auth/profile-photo"));
+            setProfilePhotoPreview("/api/auth/profile-photo");
           }
           
           // Set form data - gunakan name langsung dari API
@@ -303,7 +390,14 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append("photo", file);
 
-        const response = await fetch(buildApiUrl("/api/auth/upload-profile-photo"), {
+        // Use direct endpoint (not proxy) for file uploads to avoid size limits
+        const uploadUrl = buildApiUrl("/api/auth/upload-profile-photo");
+        // If using proxy, bypass it for local upload endpoint
+        const finalUrl = uploadUrl.includes('/api/proxy') 
+          ? '/api/auth/upload-profile-photo' 
+          : uploadUrl;
+
+        const response = await fetch(finalUrl, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -314,12 +408,12 @@ export default function ProfilePage() {
         if (response.ok) {
           setSuccessMessage("Foto profil berhasil diupload");
           
-          // Update preview with new photo URL (add timestamp to force refresh)
+          // Update preview with new photo URL - always use direct endpoint (not proxy)
           if (profilePhotoPreview && profilePhotoPreview.startsWith("blob:")) {
             URL.revokeObjectURL(profilePhotoPreview);
           }
-          // Use profile photo endpoint with timestamp to force refresh
-          setProfilePhotoPreview(buildApiUrl(`/api/auth/profile-photo?t=${Date.now()}`));
+          // Force refresh by adding timestamp query param
+          setProfilePhotoPreview(`/api/auth/profile-photo?t=${Date.now()}`);
           setProfilePhoto(null);
           
           setTimeout(() => setSuccessMessage(""), 3000);
@@ -511,7 +605,7 @@ export default function ProfilePage() {
                             src={profilePhotoPreview}
                             alt="Profile"
                             userInitial={userInitial}
-                            token={localStorage.getItem("token") || ""}
+                            token={authToken} // Use same token as /api/auth/me
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-[#00C2FF] to-[#00B0E6] flex items-center justify-center">

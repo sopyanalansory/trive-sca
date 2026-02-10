@@ -7,6 +7,10 @@ if (!targetBase) {
   console.warn('API proxy is enabled but API_PROXY_TARGET is not set.');
 }
 
+// Configure max body size for proxy (10MB)
+export const maxDuration = 30;
+export const runtime = 'nodejs';
+
 // Headers we do not want to forward back to the client
 const hopByHopHeaders = [
   'connection',
