@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         p.server_name,
         p.account_type,
         u.id as user_id,
-        u.name as user_name,
+        u.fullname as user_name,
         u.email as user_email
       FROM platforms p
       JOIN users u ON p.user_id = u.id

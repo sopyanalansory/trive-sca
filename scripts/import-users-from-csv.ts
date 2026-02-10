@@ -219,7 +219,7 @@ async function importUsers() {
           const userId = existingUser.rows[0].id;
           
           // Build update query with additional fields if available
-          let updateFields = ['name = $1', 'phone = $2', 'updated_at = CURRENT_TIMESTAMP'];
+          let updateFields = ['fullname = $1', 'phone = $2', 'updated_at = CURRENT_TIMESTAMP'];
           let updateValues: any[] = [name, phone];
           let paramIndex = 3;
           
@@ -260,7 +260,7 @@ async function importUsers() {
           successCount++;
         } else {
           // Build insert query with additional fields if available
-          let insertFields = ['name', 'email', 'phone', 'country_code', 'password_hash', 
+          let insertFields = ['fullname', 'email', 'phone', 'country_code', 'password_hash', 
                               'marketing_consent', 'terms_consent', 'email_verified', 'phone_verified'];
           let insertValues: any[] = [
             name,

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email
     const result = await pool.query(
-      'SELECT id, name, email, phone, country_code, password_hash FROM users WHERE email = $1',
+      'SELECT id, fullname, email, phone, country_code, password_hash FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
         message: 'Login berhasil',
         user: {
           id: user.id,
-          name: user.name,
+          name: user.fullname,
+          fullname: user.fullname,
           email: user.email,
           phone: user.phone,
           countryCode: user.country_code,

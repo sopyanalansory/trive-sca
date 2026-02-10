@@ -306,18 +306,13 @@ export default function Sidebar({
               {/* Akun Section */}
               <div className="px-4 mb-4">
                 <p className="text-sm font-semibold text-black mb-2">Akun</p>
-                <span
-                  className="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed opacity-50 rounded"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  Akun
-                </span>
-                <span
-                  className="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed opacity-50 rounded"
-                  onClick={(e) => e.preventDefault()}
+                <Link
+                  href="/profile"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  onClick={() => setProfileHovered(false)}
                 >
                   Profil
-                </span>
+                </Link>
               </div>
 
               {/* Bahasa Section */}

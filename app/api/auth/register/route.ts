@@ -162,9 +162,9 @@ export async function POST(request: NextRequest) {
       // Insert user into database
       const result = await pool.query(
         `INSERT INTO users 
-         (name, email, phone, country_code, password_hash, referral_code, marketing_consent, terms_consent, phone_verified)
+         (fullname, email, phone, country_code, password_hash, referral_code, marketing_consent, terms_consent, phone_verified)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING id, name, email, phone, country_code, created_at`,
+         RETURNING id, fullname, email, phone, country_code, created_at`,
         [
           name.trim(),
           email.toLowerCase().trim(),
@@ -188,7 +188,8 @@ export async function POST(request: NextRequest) {
           message: 'Registrasi berhasil',
           user: {
             id: user.id,
-            name: user.name,
+            name: user.fullname,
+            fullname: user.fullname,
             email: user.email,
             phone: user.phone,
           },

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Get user details for email
     const userResult = await pool.query(
-      'SELECT id, name, email FROM users WHERE id = $1',
+      'SELECT id, fullname, email FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Send email notification (non-blocking)
     sendWithdrawalNotificationEmail({
       userId: user.id,
-      userName: user.name,
+      userName: user.fullname,
       userEmail: user.email,
       platformId: platform.id,
       loginNumber: platform.login_number,
