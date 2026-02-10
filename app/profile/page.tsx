@@ -7,6 +7,54 @@ import Footer from "../components/Footer";
 import WhatsAppButton from "../components/WhatsAppButton";
 import Sidebar from "../components/Sidebar";
 
+// Component untuk render profile photo dengan Authorization header
+function ProfilePhotoImage({ src, alt, userInitial, token }: { src: string; alt: string; userInitial: string; token: string }) {
+  const [imageSrc, setImageSrc] = useState<string>("");
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    // Fetch image dengan Authorization header
+    if (src && token) {
+      fetch(src, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (res.ok) {
+            return res.blob();
+          }
+          throw new Error("Failed to load image");
+        })
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          setImageSrc(url);
+          setHasError(false);
+        })
+        .catch(() => {
+          setHasError(true);
+        });
+    }
+  }, [src, token]);
+
+  if (hasError || !imageSrc) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-[#00C2FF] to-[#00B0E6] flex items-center justify-center">
+        <span className="text-4xl font-bold text-white">{userInitial}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageSrc}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setHasError(true)}
+    />
+  );
+}
+
 interface ProfileData {
   fullName: string;
   phone: string;
@@ -84,6 +132,12 @@ export default function ProfilePage() {
           const user = data.user;
           setUserName(user.name?.toUpperCase() || "");
           setUserInitial(user.name?.charAt(0).toUpperCase() || "M");
+          
+          // Set profile photo if exists
+          if (user.hasProfilePhoto) {
+            // Use token in URL for image src (will be handled by API)
+            setProfilePhotoPreview(buildApiUrl("/api/auth/profile-photo"));
+          }
           
           // Set form data - gunakan name langsung dari API
           setFormData({
@@ -219,16 +273,66 @@ export default function ProfilePage() {
   const labelClass = "block text-xs font-medium text-gray-600 mb-1";
   const errorClass = "mt-0.5 text-[11px] text-red-500";
   
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
         setErrorMessage("Pilih file gambar (JPG, PNG)");
         return;
       }
-      if (profilePhotoPreview) URL.revokeObjectURL(profilePhotoPreview);
-      setProfilePhoto(file);
-      setProfilePhotoPreview(URL.createObjectURL(file));
+
+      // Validate file size (max 2MB)
+      const maxSize = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxSize) {
+        setErrorMessage("Ukuran file terlalu besar. Maksimal 2MB");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      // Upload photo immediately
+      setSaving(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      try {
+        const formData = new FormData();
+        formData.append("photo", file);
+
+        const response = await fetch(buildApiUrl("/api/auth/upload-profile-photo"), {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          setSuccessMessage("Foto profil berhasil diupload");
+          
+          // Update preview with new photo URL (add timestamp to force refresh)
+          if (profilePhotoPreview && profilePhotoPreview.startsWith("blob:")) {
+            URL.revokeObjectURL(profilePhotoPreview);
+          }
+          // Use profile photo endpoint with timestamp to force refresh
+          setProfilePhotoPreview(buildApiUrl(`/api/auth/profile-photo?t=${Date.now()}`));
+          setProfilePhoto(null);
+          
+          setTimeout(() => setSuccessMessage(""), 3000);
+        } else {
+          const errorData = await response.json();
+          setErrorMessage(errorData.error || "Gagal mengupload foto profil");
+        }
+      } catch (error) {
+        console.error("Error uploading photo:", error);
+        setErrorMessage("Terjadi kesalahan saat mengupload foto");
+      } finally {
+        setSaving(false);
+      }
     }
     if (e.target) e.target.value = "";
   };
@@ -403,10 +507,11 @@ export default function ProfilePage() {
                     <div className="relative mb-4">
                       <div className="w-32 h-32 rounded-full bg-gray-100 border-4 border-gray-200 flex items-center justify-center overflow-hidden">
                         {profilePhotoPreview ? (
-                          <img
+                          <ProfilePhotoImage 
                             src={profilePhotoPreview}
                             alt="Profile"
-                            className="w-full h-full object-cover"
+                            userInitial={userInitial}
+                            token={localStorage.getItem("token") || ""}
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-[#00C2FF] to-[#00B0E6] flex items-center justify-center">
@@ -460,19 +565,6 @@ export default function ProfilePage() {
                       <br />
                       Maksimal: 2MB
                     </p>
-                    {profilePhoto && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (profilePhotoPreview) URL.revokeObjectURL(profilePhotoPreview);
-                          setProfilePhoto(null);
-                          setProfilePhotoPreview(null);
-                        }}
-                        className="text-xs text-red-600 hover:text-red-700 font-medium"
-                      >
-                        Hapus Foto
-                      </button>
-                    )}
                   </div>
                   
                   {/* Edit Kata Sandi Button */}

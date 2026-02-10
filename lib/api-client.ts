@@ -6,6 +6,9 @@ const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '')
 const useProxy = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true';
 
 export function buildApiUrl(path: string): string {
+  if (!path) {
+    return '';
+  }
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   if (useProxy) {
     // Route through Next.js API proxy to avoid browser CORS

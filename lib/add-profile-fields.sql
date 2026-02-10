@@ -40,6 +40,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS street_name VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS house_number VARCHAR(50);
 
+-- Add profile photo field (store as BLOB/BYTEA)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo BYTEA;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo_mime_type VARCHAR(50);
+
 -- Create indexes for faster lookups (optional, but recommended for search functionality)
 CREATE INDEX IF NOT EXISTS idx_users_city ON users(city);
 CREATE INDEX IF NOT EXISTS idx_users_postal_code ON users(postal_code);

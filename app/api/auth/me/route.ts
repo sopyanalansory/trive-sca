@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(
       `SELECT id, fullname, email, phone, country_code, 
        place_of_birth,
-       city, postal_code, street_name, house_number 
+       city, postal_code, street_name, house_number,
+       profile_photo, profile_photo_mime_type
        FROM users WHERE id = $1`,
       [decoded.userId]
     );
@@ -41,6 +42,9 @@ export async function GET(request: NextRequest) {
     }
 
     const user = result.rows[0];
+
+    // Check if user has profile photo
+    const hasProfilePhoto = user.profile_photo !== null;
 
     return NextResponse.json(
       {
@@ -56,6 +60,7 @@ export async function GET(request: NextRequest) {
           postalCode: user.postal_code || '',
           streetName: user.street_name || '',
           houseNumber: user.house_number || '',
+          hasProfilePhoto: hasProfilePhoto,
         },
       },
       { status: 200 }
@@ -211,7 +216,8 @@ export async function PUT(request: NextRequest) {
       WHERE id = $${paramIndex}
       RETURNING id, fullname, email, phone, country_code, 
                 place_of_birth,
-                city, postal_code, street_name, house_number
+                city, postal_code, street_name, house_number,
+                profile_photo, profile_photo_mime_type
     `;
 
     const result = await pool.query(updateQuery, values);
@@ -224,6 +230,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const user = result.rows[0];
+
+    // Check if user has profile photo
+    const hasProfilePhoto = user.profile_photo !== null;
 
     return NextResponse.json(
       {
@@ -240,6 +249,7 @@ export async function PUT(request: NextRequest) {
           postalCode: user.postal_code || '',
           streetName: user.street_name || '',
           houseNumber: user.house_number || '',
+          hasProfilePhoto: hasProfilePhoto,
         },
       },
       { status: 200 }
