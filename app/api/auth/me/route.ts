@@ -67,8 +67,11 @@ export async function GET(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Get user error:', error);
+    const message = process.env.NODE_ENV === 'development' && error?.message
+      ? error.message
+      : 'Terjadi kesalahan saat mengambil data user. Silakan coba lagi.';
     return NextResponse.json(
-      { error: 'Terjadi kesalahan saat mengambil data user. Silakan coba lagi.' },
+      { error: message },
       { status: 500 }
     );
   }

@@ -55,8 +55,19 @@ export async function GET(request: NextRequest) {
 
     const { profile_photo, profile_photo_mime_type } = result.rows[0];
 
-    // Return image with proper content type
-    return new NextResponse(profile_photo, {
+    // BYTEA dari PostgreSQL → Buffer (Node); NextResponse menerima Buffer di runtime
+    const body = Buffer.isBuffer(profile_photo)
+      ? profile_photo
+      : (() => {
+          const raw = profile_photo as ArrayBuffer | ArrayBufferView;
+          const bytes =
+            raw instanceof ArrayBuffer
+              ? new Uint8Array(raw)
+              : new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
+          return Buffer.from(bytes);
+        })();
+
+    return new NextResponse(body as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': profile_photo_mime_type || 'image/jpeg',
@@ -64,9 +75,17 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Get profile photo error:', error);
+    const detail =
+      (error && typeof error === 'object' && (error.message || error.cause?.message)) ||
+      (error?.stack && String(error.stack).split('\n')[0]) ||
+      (typeof error === 'object' ? JSON.stringify(error) : String(error)) ||
+      'Unknown error';
+    console.error('[Profile Photo API] Error:', detail, error);
     return NextResponse.json(
-      { error: 'Terjadi kesalahan saat mengambil foto profil.' },
+      {
+        error: 'Terjadi kesalahan saat mengambil foto profil.',
+        detail,
+      },
       { status: 500 }
     );
   }

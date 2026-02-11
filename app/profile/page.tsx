@@ -60,8 +60,8 @@ function ProfilePhotoImage({ src, alt, userInitial, token }: { src: string; alt:
             // Try to get error message
             return res.text().then(text => {
               console.error('Profile photo error response:', text);
-              // Compare with /api/auth/me to see if token is same
-              fetch('/api/auth/me', {
+              // Compare with /api/auth/me to see if token is same (pakai buildApiUrl agar ke api.trive.co.id)
+              fetch(buildApiUrl('/api/auth/me'), {
                 method: 'GET',
                 headers: {
                   'Authorization': `Bearer ${actualToken}`,
@@ -221,9 +221,9 @@ export default function ProfilePage() {
           setUserName(user.name?.toUpperCase() || "");
           setUserInitial(user.name?.charAt(0).toUpperCase() || "M");
           
-          // Set profile photo if exists - always use direct endpoint (not proxy)
+          // Set profile photo if exists - gunakan buildApiUrl agar ke api.trive.co.id (proxy)
           if (user.hasProfilePhoto) {
-            setProfilePhotoPreview("/api/auth/profile-photo");
+            setProfilePhotoPreview(buildApiUrl("/api/auth/profile-photo"));
           }
           
           // Set form data - gunakan name langsung dari API
@@ -390,14 +390,10 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append("photo", file);
 
-        // Use direct endpoint (not proxy) for file uploads to avoid size limits
+        // Gunakan buildApiUrl agar upload ke api.trive.co.id (proxy)
         const uploadUrl = buildApiUrl("/api/auth/upload-profile-photo");
-        // If using proxy, bypass it for local upload endpoint
-        const finalUrl = uploadUrl.includes('/api/proxy') 
-          ? '/api/auth/upload-profile-photo' 
-          : uploadUrl;
 
-        const response = await fetch(finalUrl, {
+        const response = await fetch(uploadUrl, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -412,8 +408,8 @@ export default function ProfilePage() {
           if (profilePhotoPreview && profilePhotoPreview.startsWith("blob:")) {
             URL.revokeObjectURL(profilePhotoPreview);
           }
-          // Force refresh by adding timestamp query param
-          setProfilePhotoPreview(`/api/auth/profile-photo?t=${Date.now()}`);
+          // Force refresh by adding timestamp query param (ke api.trive.co.id via proxy)
+          setProfilePhotoPreview(`${buildApiUrl("/api/auth/profile-photo")}?t=${Date.now()}`);
           setProfilePhoto(null);
           
           setTimeout(() => setSuccessMessage(""), 3000);
