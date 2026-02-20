@@ -210,7 +210,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right Section - Login Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center px-4 sm:px-6 py-4 sm:py-10 lg:px-8 lg:py-16">
+        <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-4 sm:px-6 py-4 sm:py-10 lg:px-8 lg:py-16">
           <div className="w-full max-w-md lg:max-w-none relative z-10">
             {/* Login Form Card */}
             <div className="bg-[#ffffffb3] px-6 sm:px-8 md:px-12 lg:px-[60px] py-8 sm:py-10 md:py-12 lg:py-[77px] rounded-lg shadow-lg relative z-10">
@@ -425,11 +425,10 @@ export default function LoginPage() {
                 </div>
               </form>
             </div>
-
-            {/* Footer below form */}
-            <div className="mt-4 sm:mt-6 relative z-10">
-              <Footer variant="transparent" />
-            </div>
+          </div>
+          {/* Footer below form */}
+          <div className="w-full mt-4 sm:mt-6 relative z-10">
+            <Footer variant="transparent" />
           </div>
         </div>
         </div>

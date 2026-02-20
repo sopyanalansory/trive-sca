@@ -409,7 +409,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Right Section - Register Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+        <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
           <div className="w-full relative z-10">
             {/* Register Form Card */}
             <div className="bg-[#ffffffb3] px-4 py-6 sm:px-8 sm:py-10 md:px-[40px] md:py-[50px] lg:px-[60px] lg:py-[77px] rounded-lg shadow-lg relative z-10">
@@ -796,11 +796,10 @@ export default function RegisterPage() {
                 </div>
               </form>
             </div>
-
-            {/* Footer below form */}
-            <div className="mt-4 sm:mt-6 relative z-10">
-              <Footer variant="transparent" />
-            </div>
+          </div>
+          {/* Footer below form */}
+          <div className="w-full mt-4 sm:mt-6 relative z-10">
+            <Footer variant="transparent" />
           </div>
         </div>
         </div>

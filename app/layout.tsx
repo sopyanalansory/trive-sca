@@ -9,8 +9,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Trive SCA - Next.js App",
-  description: "A modern Next.js application ready for Vercel deployment",
+  title: "Broker Forex Terbaik Indonesia Teregulasi Resmi BAPPEBTI, OJK, dan Bank Indonesia - Trive Invest",
+  description: "Trive Invest, broker forex terbaik Indonesia teregulasi resmi BAPPEBTI, OJK, dan Bank Indonesia. Nikmati kondisi trading terbaik spread rendah, komisi $1, bebas biaya swap, leverage hingga 1:1000, dan edukasi untuk membantu Anda sukses di pasar forex.",
 };
 
 export default function RootLayout({
