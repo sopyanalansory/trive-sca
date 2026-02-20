@@ -178,9 +178,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-[#69d7f6] relative overflow-hidden">
-      <div className="w-full max-w-[1170px] mx-auto">
+      <div className="w-full max-w-[1170px] mx-auto relative flex flex-col flex-1">
         {/* Two Column Layout */}
-        <div className="w-full flex flex-col lg:flex-row relative z-10">
+        <div className="w-full flex flex-col lg:flex-row flex-1">
         {/* Left Section - Marketing */}
         <div className="w-full lg:w-1/2 flex flex-col justify-between px-4 sm:px-6 md:px-8 py-8 sm:py-10 lg:px-16 lg:py-16">
           {/* Logo */}
@@ -209,10 +209,21 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Section - Login Form */}
-        <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-4 sm:px-6 py-4 sm:py-10 lg:px-8 lg:py-16">
+        {/* Right Section - Login Form, sejajar dengan logo (items-start), bubbles di belakang */}
+        <div className="w-full lg:w-1/2 flex flex-col items-center justify-start px-4 sm:px-6 py-8 sm:py-10 lg:px-8 lg:py-16 relative">
+          {/* Bubbles: kanan atas area form, di belakang form (z-0; form z-10 di depan) */}
+          <div className="absolute top-0 right-0 w-[90px] sm:w-[110px] lg:w-[130px] h-[80px] sm:h-[100px] lg:h-[120px] pointer-events-none z-0">
+            <Image
+              src="/bubbles.png"
+              alt=""
+              fill
+              className="object-contain object-top-right opacity-90"
+              priority={false}
+              sizes="(max-width: 640px) 90px, (max-width: 1024px) 110px, 130px"
+            />
+          </div>
           <div className="w-full max-w-md lg:max-w-none relative z-10">
-            {/* Login Form Card */}
+            {/* Login Form Card - z-10 agar di depan bubbles */}
             <div className="bg-[#ffffffb3] px-6 sm:px-8 md:px-12 lg:px-[60px] py-8 sm:py-10 md:py-12 lg:py-[77px] rounded-lg shadow-lg relative z-10">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-medium text-black mb-4 sm:mb-6">
                 Masuk ke client area
