@@ -70,6 +70,7 @@ export default function PersonalInfoPage() {
   const [fotoSelfie, setFotoSelfie] = React.useState<File | null>(null);
   const [previewKtp, setPreviewKtp] = React.useState<string | null>(null);
   const [previewSelfie, setPreviewSelfie] = React.useState<string | null>(null);
+  const [existingDocumentUrls, setExistingDocumentUrls] = React.useState<Record<string, string>>({});
   const [panduanModal, setPanduanModal] = React.useState<"ktp" | "selfie" | null>(null);
 
   const inputFotoRef = React.useRef<HTMLInputElement>(null);
@@ -136,6 +137,32 @@ export default function PersonalInfoPage() {
         router.push("/login");
         return;
       }
+      // Resume: isi form dari data aplikasi yang sudah disimpan (backend)
+      const appRes = await fetch(buildApiUrl("/api/investment-account"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (appRes.ok) {
+        const appJson = await appRes.json();
+        const personalInfo = appJson.application?.personalInfo;
+        const docUrls = appJson.application?.documentUrls;
+        if (personalInfo && typeof personalInfo === "object") {
+          setFormData((prev) => ({
+            ...prev,
+            ...personalInfo,
+          }));
+          const name = (personalInfo as FormData).name;
+          if (name) {
+            setUserName(String(name).toUpperCase());
+            setUserInitial(String(name).charAt(0).toUpperCase());
+          }
+        }
+        if (docUrls && typeof docUrls === "object" && (docUrls.fotoKtp || docUrls.fotoSelfie)) {
+          const urls = docUrls as Record<string, string>;
+          setExistingDocumentUrls(urls);
+          if (urls.fotoKtp) setPreviewKtp(urls.fotoKtp);
+          if (urls.fotoSelfie) setPreviewSelfie(urls.fotoSelfie);
+        }
+      }
     } catch (err) {
       console.error("Error fetching user:", err);
     } finally {
@@ -150,7 +177,7 @@ export default function PersonalInfoPage() {
         setErrors((prev) => ({ ...prev, fotoKtp: "Pilih file gambar (JPG, PNG)." }));
         return;
       }
-      if (previewKtp) URL.revokeObjectURL(previewKtp);
+      if (previewKtp?.startsWith("blob:")) URL.revokeObjectURL(previewKtp);
       setFotoKtp(file);
       setPreviewKtp(URL.createObjectURL(file));
       setErrors((prev) => ({ ...prev, fotoKtp: "" }));
@@ -165,7 +192,7 @@ export default function PersonalInfoPage() {
         setErrors((prev) => ({ ...prev, fotoSelfie: "Pilih file gambar (JPG, PNG)." }));
         return;
       }
-      if (previewSelfie) URL.revokeObjectURL(previewSelfie);
+      if (previewSelfie?.startsWith("blob:")) URL.revokeObjectURL(previewSelfie);
       setFotoSelfie(file);
       setPreviewSelfie(URL.createObjectURL(file));
       setErrors((prev) => ({ ...prev, fotoSelfie: "" }));
@@ -174,17 +201,27 @@ export default function PersonalInfoPage() {
   };
 
   const clearFotoKtp = () => {
-    if (previewKtp) URL.revokeObjectURL(previewKtp);
+    if (previewKtp?.startsWith("blob:")) URL.revokeObjectURL(previewKtp);
     setFotoKtp(null);
     setPreviewKtp(null);
+    setExistingDocumentUrls((prev) => {
+      const next = { ...prev };
+      delete next.fotoKtp;
+      return next;
+    });
     setErrors((prev) => ({ ...prev, fotoKtp: "" }));
     if (inputFotoRef.current) inputFotoRef.current.value = "";
   };
 
   const clearFotoSelfie = () => {
-    if (previewSelfie) URL.revokeObjectURL(previewSelfie);
+    if (previewSelfie?.startsWith("blob:")) URL.revokeObjectURL(previewSelfie);
     setFotoSelfie(null);
     setPreviewSelfie(null);
+    setExistingDocumentUrls((prev) => {
+      const next = { ...prev };
+      delete next.fotoSelfie;
+      return next;
+    });
     setErrors((prev) => ({ ...prev, fotoSelfie: "" }));
     if (inputSelfieRef.current) inputSelfieRef.current.value = "";
   };
@@ -195,8 +232,8 @@ export default function PersonalInfoPage() {
   previewSelfieRef.current = previewSelfie;
   React.useEffect(() => {
     return () => {
-      if (previewKtpRef.current) URL.revokeObjectURL(previewKtpRef.current);
-      if (previewSelfieRef.current) URL.revokeObjectURL(previewSelfieRef.current);
+      if (previewKtpRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewKtpRef.current);
+      if (previewSelfieRef.current?.startsWith("blob:")) URL.revokeObjectURL(previewSelfieRef.current);
     };
   }, []);
 
@@ -219,19 +256,86 @@ export default function PersonalInfoPage() {
     if (!formData.alamatRumah.trim()) newErrors.alamatRumah = "Bagian ini diperlukan.";
     if (!formData.namaPasangan.trim()) newErrors.namaPasangan = "Bagian ini diperlukan.";
     if (!formData.statusRumah.trim()) newErrors.statusRumah = "Bagian ini diperlukan.";
-    if (!fotoKtp) newErrors.fotoKtp = "Upload foto KTP diperlukan.";
-    if (!fotoSelfie) newErrors.fotoSelfie = "Upload foto selfie diperlukan.";
+    const hasKtp = !!fotoKtp || !!existingDocumentUrls.fotoKtp;
+    const hasSelfie = !!fotoSelfie || !!existingDocumentUrls.fotoSelfie;
+    if (!hasKtp) newErrors.fotoKtp = "Upload foto KTP diperlukan.";
+    if (!hasSelfie) newErrors.fotoSelfie = "Upload foto selfie diperlukan.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [saving, setSaving] = React.useState(false);
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    router.push("/open-investment-account/company-profile");
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    setSaving(true);
+    try {
+      const documentUrls: Record<string, string> = { ...existingDocumentUrls };
+      if (fotoKtp || fotoSelfie) {
+        const uploadForm = new FormData();
+        if (fotoKtp) uploadForm.append("fotoKtp", fotoKtp);
+        if (fotoSelfie) uploadForm.append("fotoSelfie", fotoSelfie);
+        const uploadRes = await fetch(buildApiUrl("/api/investment-account/upload-documents"), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: uploadForm,
+        });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          setErrors((prev) => ({ ...prev, fotoKtp: (err.error as string) || "Gagal upload dokumen.", fotoSelfie: "" }));
+          setSaving(false);
+          return;
+        }
+        const urls = (await uploadRes.json()) as { fotoKtp?: string; fotoSelfie?: string };
+        if (urls.fotoKtp) documentUrls.fotoKtp = urls.fotoKtp;
+        if (urls.fotoSelfie) documentUrls.fotoSelfie = urls.fotoSelfie;
+      }
+      const res = await fetch(buildApiUrl("/api/investment-account"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ step: 1, data: formData, documentUrls: Object.keys(documentUrls).length > 0 ? documentUrls : undefined }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Gagal menyimpan informasi pribadi:", err);
+        setSaving(false);
+        return;
+      }
+      router.push("/open-investment-account/company-profile");
+    } catch (err) {
+      console.error(err);
+      setSaving(false);
+    }
   };
 
   const displayPhone = formData.phone;
+
+  // Normalize date for input[type=date] (expects YYYY-MM-DD)
+  const normalizeDateForInput = (value: string): string => {
+    const v = (value || "").trim();
+    if (!v) return "";
+    // Dari DB sering ISO (1990-05-15 atau 1990-05-15T00:00:00.000Z) → ambil YYYY-MM-DD saja
+    const isoMatch = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return isoMatch[0];
+    // Format DD/MM/YYYY atau DD-MM-YYYY
+    const parts = v.split(/[/.-]/);
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      const day = d.padStart(2, "0");
+      const month = m.padStart(2, "0");
+      const year = y.length === 2 ? `20${y}` : y;
+      if (year.length === 4) return `${year}-${month}-${day}`;
+    }
+    return v;
+  };
 
   const inputBase =
     "w-full px-2.5 py-2 rounded-md border border-gray-200 text-xs text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:ring-1 focus:ring-[#00C2FF]/30 focus:border-[#00C2FF]";
@@ -380,7 +484,7 @@ export default function PersonalInfoPage() {
                         <div className="relative">
                           <img src={previewKtp} alt="Preview KTP" className="w-full h-40 object-contain bg-white" />
                           <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-2 py-1.5 bg-black/50 text-white text-[11px]">
-                            <span className="truncate">{fotoKtp?.name}</span>
+                            <span className="truncate">{fotoKtp?.name ?? "Foto KTP tersimpan"}</span>
                             <button type="button" onClick={clearFotoKtp} className="text-white hover:underline ml-2">
                               Hapus
                             </button>
@@ -425,7 +529,7 @@ export default function PersonalInfoPage() {
                         <div className="relative">
                           <img src={previewSelfie} alt="Preview Selfie" className="w-full h-40 object-contain bg-white" />
                           <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-2 py-1.5 bg-black/50 text-white text-[11px]">
-                            <span className="truncate">{fotoSelfie?.name}</span>
+                            <span className="truncate">{fotoSelfie?.name ?? "Foto selfie tersimpan"}</span>
                             <button type="button" onClick={clearFotoSelfie} className="text-white hover:underline ml-2">
                               Hapus
                             </button>
@@ -453,10 +557,11 @@ export default function PersonalInfoPage() {
                   <div>
                     <label className={labelClass}>Tanggal Lahir</label>
                     <input
+                      type="date"
                       className={`${inputBase} ${inputEditable}`}
-                      placeholder="DD/MM/YYYY"
-                      value={formData.tanggalLahir}
+                      value={normalizeDateForInput(formData.tanggalLahir)}
                       onChange={(e) => handleInputChange("tanggalLahir", e.target.value)}
+                      max={new Date().toISOString().slice(0, 10)}
                     />
                   </div>
                   <div>
@@ -584,9 +689,10 @@ export default function PersonalInfoPage() {
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    className="bg-[#4fc3f7] hover:bg-[#3db3e7] text-white px-4 py-2 rounded-full text-xs font-bold transition-colors min-w-[130px] border border-[#4fc3f7] cursor-pointer"
+                    disabled={saving}
+                    className="bg-[#4fc3f7] hover:bg-[#3db3e7] text-white px-4 py-2 rounded-full text-xs font-bold transition-colors min-w-[130px] border border-[#4fc3f7] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Berikutnya
+                    {saving ? "Menyimpan..." : "Berikutnya"}
                   </button>
                 </div>
               </form>

@@ -14,6 +14,7 @@ export default function OpenInvestmentAccountPage() {
   const [userName, setUserName] = useState<string>("");
   const [userInitial, setUserInitial] = useState<string>("M");
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [checkingProgress, setCheckingProgress] = useState(true);
   const [selectedProducts, setSelectedProducts] = useState<{
     spa: string[];
     multilateral: string[];
@@ -36,16 +37,74 @@ export default function OpenInvestmentAccountPage() {
     selectedProducts.spa.length > 0 ||
     selectedProducts.multilateral.length > 0;
 
-  // Check if user has token, redirect to login if not
+  // Step index -> path untuk resume (skip 0 = halaman ini)
+  const stepToPath: Record<number, string> = {
+    1: "/open-investment-account/personal-info",
+    2: "/open-investment-account/company-profile",
+    3: "/open-investment-account/demo-experience-statement",
+    4: "/open-investment-account/transaction-experience",
+    5: "/open-investment-account/disclosure-statement",
+    6: "/open-investment-account/account-opening-form",
+    7: "/open-investment-account/emergency-contact-form",
+    8: "/open-investment-account/employment-form",
+    9: "/open-investment-account/wealth-list-form",
+    10: "/open-investment-account/account-bank-form",
+    11: "/open-investment-account/additional-statement",
+    12: "/open-investment-account/atur-akun",
+  };
+
+  // Check if user has token, redirect to login if not; fetch user + existing application for resume
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/login");
-    } else {
-      // Fetch user data
-      fetchUserData(token);
+      return;
     }
+    fetchUserData(token);
+    checkProgressAndResume(token);
   }, [router]);
+
+  const checkProgressAndResume = async (token: string) => {
+    try {
+      const res = await fetch(buildApiUrl("/api/investment-account"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+          return;
+        }
+        setCheckingProgress(false);
+        return;
+      }
+      const json = await res.json();
+      const app = json.application;
+      if (!app || app.status === "submitted") {
+        setCheckingProgress(false);
+        return;
+      }
+      const step = app.currentStep ?? 0;
+      // Sudah selesai step tertentu → tampilkan step berikutnya
+      if (step >= 1) {
+        const nextStep = step < 12 ? step + 1 : step;
+        const path = stepToPath[nextStep];
+        if (path) {
+          router.replace(path);
+          return;
+        }
+      }
+      if (step === 0 && app.selectedProducts && (app.selectedProducts.spa?.length > 0 || app.selectedProducts.multilateral?.length > 0)) {
+        setSelectedProducts({
+          spa: app.selectedProducts.spa ?? [],
+          multilateral: app.selectedProducts.multilateral ?? [],
+        });
+      }
+      setCheckingProgress(false);
+    } catch (_) {
+      setCheckingProgress(false);
+    }
+  };
 
   // Set initial sidebar state based on screen size
   useEffect(() => {
@@ -96,19 +155,54 @@ export default function OpenInvestmentAccountPage() {
     }
   };
 
-  // Handle form submission: save selection and go to step Informasi Pribadi
-  const handleSubmit = () => {
-    if (!hasSelectedProducts || !isConfirmed) {
+  // Handle form submission: simpan ke backend lalu ke Informasi Pribadi
+  const [saving, setSaving] = useState(false);
+  const handleSubmit = async () => {
+    if (!hasSelectedProducts || !isConfirmed) return;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
       return;
     }
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(
-        "openAccountSelectedProducts",
-        JSON.stringify(selectedProducts)
-      );
+    setSaving(true);
+    try {
+      const res = await fetch(buildApiUrl("/api/investment-account"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ step: 0, data: selectedProducts }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Gagal menyimpan produk:", err);
+        setSaving(false);
+        return;
+      }
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("openAccountSelectedProducts", JSON.stringify(selectedProducts));
+      }
+      router.push("/open-investment-account/personal-info");
+    } catch (e) {
+      console.error(e);
+      setSaving(false);
     }
-    router.push("/open-investment-account/personal-info");
   };
+
+  if (checkingProgress) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-10 h-10 border-2 border-[#00C2FF] border-t-transparent rounded-full animate-spin"
+            aria-hidden
+          />
+          <p className="text-sm text-gray-600">Memeriksa progres pembukaan akun...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex relative">
@@ -265,7 +359,7 @@ export default function OpenInvestmentAccountPage() {
           <div className="max-w-md mx-auto flex justify-center">
             <OpenAccountButton
               onClick={handleSubmit}
-              disabled={!hasSelectedProducts || !isConfirmed}
+              disabled={!hasSelectedProducts || !isConfirmed || saving}
             />
           </div>
         </div>

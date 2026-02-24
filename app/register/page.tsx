@@ -756,15 +756,19 @@ export default function RegisterPage() {
                     >
                       Saya mengonfirmasi bahwa saya telah membaca dan memahami{" "}
                       <Link
-                        href="/privacy-policy"
-                        className="text-[#666666] hover:text-black underline"
+                        href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-black hover:text-black underline font-medium"
                       >
                         Privacy Policy
                       </Link>
                       ,{" "}
                       <Link
-                        href="/terms-of-business"
-                        className="text-[#666666] hover:text-black underline"
+                        href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-black hover:text-black underline font-medium"
                       >
                         Ketentuan Bisnis
                       </Link>

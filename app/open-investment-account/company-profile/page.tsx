@@ -27,7 +27,8 @@ export default function CompanyProfilePage() {
   const [userName, setUserName] = useState("");
   const [userInitial, setUserInitial] = useState("M");
   const [accepted, setAccepted] = useState("");
-  const [tanggalPenerimaan] = useState(() => formatDateNow());
+  const [tanggalPenerimaan, setTanggalPenerimaan] = useState(() => formatDateNow());
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -40,14 +41,23 @@ export default function CompanyProfilePage() {
     window.addEventListener("resize", handleResize);
     (async () => {
       try {
-        const res = await fetch(buildApiUrl("/api/auth/me"), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const [meRes, appRes] = await Promise.all([
+          fetch(buildApiUrl("/api/auth/me"), { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(buildApiUrl("/api/investment-account"), { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        if (meRes.ok) {
+          const data = await meRes.json();
           if (data.user?.name) {
             setUserName(data.user.name.toUpperCase());
             setUserInitial(data.user.name.charAt(0).toUpperCase());
+          }
+        }
+        if (appRes.ok) {
+          const appJson = await appRes.json();
+          const company = appJson.application?.statementAcceptances?.companyProfile;
+          if (company && typeof company === "object") {
+            if (company.accepted) setAccepted(company.accepted);
+            if (company.tanggalPenerimaan) setTanggalPenerimaan(company.tanggalPenerimaan);
           }
         }
       } catch {
@@ -57,10 +67,38 @@ export default function CompanyProfilePage() {
     return () => window.removeEventListener("resize", handleResize);
   }, [router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (accepted !== "ya") return;
-    router.push("/open-investment-account/demo-experience-statement");
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(buildApiUrl("/api/investment-account"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          step: 2,
+          data: { companyProfile: { accepted, tanggalPenerimaan } },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Gagal menyimpan profil perusahaan:", err);
+        setSaving(false);
+        return;
+      }
+      router.push("/open-investment-account/demo-experience-statement");
+    } catch (err) {
+      console.error(err);
+      setSaving(false);
+    }
   };
 
   const handleBack = () => {
@@ -182,12 +220,12 @@ export default function CompanyProfilePage() {
                   <button type="button" onClick={handleBack} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-xs font-medium hover:bg-gray-50 transition-colors min-w-[130px]">
                     Kembali
                   </button>
-                  <button type="submit" disabled={accepted !== "ya"} className={`px-4 py-2 rounded-full text-xs min-w-[130px] transition-colors border ${
-                    accepted === "ya"
+                  <button type="submit" disabled={accepted !== "ya" || saving} className={`px-4 py-2 rounded-full text-xs min-w-[130px] transition-colors border ${
+                    accepted === "ya" && !saving
                       ? "bg-[#4fc3f7] hover:bg-[#3db3e7] text-white cursor-pointer border-[#4fc3f7] font-bold"
                       : "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 font-medium"
                   }`}>
-                    Berikutnya
+                    {saving ? "Menyimpan..." : "Berikutnya"}
                   </button>
                 </div>
               </form>

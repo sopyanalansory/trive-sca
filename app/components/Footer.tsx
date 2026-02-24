@@ -12,6 +12,7 @@ export default function Footer({ variant = "default" }: FooterProps) {
   const textClass = variant === "transparent" ? "text-black" : "text-[#1e293b]";
   const useUnderline = variant === "transparent";
   const linkCls = useUnderline ? linkClass : linkClassDefault;
+  const linkRedirectCls = `${linkCls} font-medium ${variant === "transparent" ? "text-black hover:text-black" : "text-[#1e293b] hover:text-[#1e293b]"}`; // font-medium (lebih tipis), warna hitam untuk link redirect
 
   const firstLineClass = variant === "transparent"
     ? "flex flex-wrap items-baseline gap-x-2 gap-y-1.5 sm:gap-x-3 sm:gap-y-0 mb-3 text-[11px] sm:text-xs"
@@ -27,12 +28,12 @@ export default function Footer({ variant = "default" }: FooterProps) {
             {/* Mobile: 4 baris seperti referensi (kiri-aligned) */}
             <div className="sm:hidden space-y-2 text-[11px] text-left">
               <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${textClass}`}>
-                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf" className={linkCls} target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
-                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf" className={linkCls} target="_blank" rel="noopener noreferrer">Terms of Business</Link>
+                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Terms of Business</Link>
               </div>
               <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${textClass}`}>
-                <Link href="https://www.triveinvest.co.id/perusahaan/legalitas" className={linkCls} target="_blank" rel="noopener noreferrer">Risk Notification</Link>
-                <Link href="https://www.triveinvest.co.id/perusahaan/regulasi-kami" className={linkCls} target="_blank" rel="noopener noreferrer">Licenses</Link>
+                <Link href="https://www.triveinvest.co.id/perusahaan/legalitas" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Risk Notification</Link>
+                <Link href="https://www.triveinvest.co.id/perusahaan/regulasi-kami" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Licenses</Link>
                 <span>© Trive Invest 2026</span>
               </div>
               <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 font-bold ${textClass}`}>
@@ -48,10 +49,10 @@ export default function Footer({ variant = "default" }: FooterProps) {
             <div className="hidden sm:block">
               <div className={`${firstLineClass} ${textClass}`}>
                 <span>© Trive Invest 2026</span>
-                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf" className={linkCls} target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
-                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf" className={linkCls} target="_blank" rel="noopener noreferrer">Terms of Business</Link>
-                <Link href="https://www.triveinvest.co.id/perusahaan/legalitas" className={linkCls} target="_blank" rel="noopener noreferrer">Risk Notification</Link>
-                <Link href="https://www.triveinvest.co.id/perusahaan/regulasi-kami" className={linkCls} target="_blank" rel="noopener noreferrer">Licenses</Link>
+                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Terms of Business</Link>
+                <Link href="https://www.triveinvest.co.id/perusahaan/legalitas" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Risk Notification</Link>
+                <Link href="https://www.triveinvest.co.id/perusahaan/regulasi-kami" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Licenses</Link>
               </div>
               <div className={`flex flex-wrap items-baseline justify-center gap-3 text-xs font-bold ${textClass}`}>
                 <span>Call 5/24: 150898</span>
@@ -67,10 +68,10 @@ export default function Footer({ variant = "default" }: FooterProps) {
             {/* Default variant: First Line - Copyright + Legal links */}
             <div className={`${firstLineClass} ${textClass}`}>
               <span>© Trive Invest 2026</span>
-              <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf" className={linkCls} target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
-              <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf" className={linkCls} target="_blank" rel="noopener noreferrer">Terms of Business</Link>
-              <Link href="https://www.triveinvest.co.id/perusahaan/legalitas" className={linkCls} target="_blank" rel="noopener noreferrer">Risk Notification</Link>
-              <Link href="https://www.triveinvest.co.id/perusahaan/regulasi-kami" className={linkCls} target="_blank" rel="noopener noreferrer">Licenses</Link>
+              <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+              <Link href="https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Terms of Business</Link>
+              <Link href="https://www.triveinvest.co.id/perusahaan/legalitas" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Risk Notification</Link>
+              <Link href="https://www.triveinvest.co.id/perusahaan/regulasi-kami" className={linkRedirectCls} target="_blank" rel="noopener noreferrer">Licenses</Link>
             </div>
           </>
         )}

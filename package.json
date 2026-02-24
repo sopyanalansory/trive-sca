@@ -18,6 +18,7 @@
     "migrate-meta-text": "tsx lib/run-meta-text-migration.ts",
     "migrate-market-updates-nullable": "tsx lib/run-market-updates-nullable-migration.ts",
     "migrate-add-profile-fields": "tsx lib/run-add-profile-fields-migration.ts",
+    "migrate-investment-account": "tsx lib/run-investment-account-migration.ts",
     "generate-favicon": "node scripts/generate-favicon.js"
   },
   "dependencies": {
