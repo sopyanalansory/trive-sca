@@ -13,12 +13,19 @@ interface SendOtpResponse {
     code?: string
 }
 
+interface CheckSalesforceClientResponse {
+    found?: boolean
+    error?: string
+    message?: string
+}
+
 interface ResetPasswordResponse {
     error?: string
     message?: string
 }
 
 type ForgotPasswordClientAreaProps = {
+    checkSalesforceClientApiUrl?: string
     sendResetPasswordOtpApiUrl?: string
     resetPasswordApiUrl?: string
     pageBgColor?: string
@@ -32,6 +39,7 @@ type ForgotPasswordClientAreaProps = {
 
 function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
     const {
+        checkSalesforceClientApiUrl = `${API_BASE}/auth/check-salesforce-client`,
         sendResetPasswordOtpApiUrl = `${API_BASE}/auth/send-reset-password-otp`,
         resetPasswordApiUrl = `${API_BASE}/auth/reset-password`,
         pageBgColor = "#69d7f6",
@@ -124,6 +132,15 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         return true
     }
 
+    const normalizePhoneForApi = (phoneValue: string): string => {
+        const digits = phoneValue.replaceAll(/\D/g, "")
+        if (!digits) return ""
+        if (digits.startsWith("62")) return digits
+        if (digits.startsWith("0")) return `62${digits.slice(1)}`
+        if (digits.startsWith("8")) return `62${digits}`
+        return digits
+    }
+
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -140,15 +157,49 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         setSuccess("")
 
         try {
+            const emailPayload = email.trim()
+            const phonePayload = normalizePhoneForApi(phone)
+            const checkSalesforceResponse = await fetch(
+                checkSalesforceClientApiUrl,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        email: emailPayload,
+                        phone: phonePayload,
+                    }),
+                }
+            )
+
+            const checkSalesforceData: CheckSalesforceClientResponse =
+                await checkSalesforceResponse.json()
+
+            if (!checkSalesforceResponse.ok) {
+                setError(
+                    checkSalesforceData.error ||
+                        "Gagal memverifikasi data klien. Silakan coba lagi."
+                )
+                return
+            }
+
+            if (!checkSalesforceData.found) {
+                setError(
+                    "Silahkan hubungi customer service untuk merubah no hp anda."
+                )
+                return
+            }
+
             const response = await fetch(sendResetPasswordOtpApiUrl, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    email: email.trim(),
-                    phone: phone.replaceAll(/\D/g, ""),
-                    phoneNumber: phone.replaceAll(/\D/g, ""),
+                    email: emailPayload,
+                    phone: phonePayload,
+                    phoneNumber: phonePayload,
                 }),
             })
 
@@ -1145,6 +1196,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
 }
 
 ForgotPasswordClientArea.defaultProps = {
+    checkSalesforceClientApiUrl: `${API_BASE}/auth/check-salesforce-client`,
     sendResetPasswordOtpApiUrl: `${API_BASE}/auth/send-reset-password-otp`,
     resetPasswordApiUrl: `${API_BASE}/auth/reset-password`,
     pageBgColor: "#69d7f6",
@@ -1158,6 +1210,12 @@ ForgotPasswordClientArea.defaultProps = {
 }
 
 addPropertyControls(ForgotPasswordClientArea, {
+    checkSalesforceClientApiUrl: {
+        type: ControlType.String,
+        title: "POST check-salesforce-client",
+        defaultValue: `${API_BASE}/auth/check-salesforce-client`,
+        placeholder: "https://…/auth/check-salesforce-client",
+    },
     sendResetPasswordOtpApiUrl: {
         type: ControlType.String,
         title: "POST send-reset-password-otp",
