@@ -5,31 +5,6 @@ import pool from '@/lib/db';
 const BASIC_AUTH_USERNAME = process.env.MARKET_UPDATES_USERNAME || 'admin';
 const BASIC_AUTH_PASSWORD = process.env.MARKET_UPDATES_PASSWORD || 'trive2024!';
 
-// CORS headers helper
-function getCorsHeaders(origin: string | null) {
-  // Allow specific origins or all origins (for development)
-  const allowedOrigins = [
-    'https://framercanvas.com',
-    'https://www.framercanvas.com',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://trive.co.id',
-    'https://www.trive.co.id',
-  ];
-  
-  // Check if origin is allowed, or allow all for development
-  const allowOrigin = origin && allowedOrigins.includes(origin) 
-    ? origin 
-    : '*'; // Allow all origins (you can restrict this in production)
-  
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400', // 24 hours
-  };
-}
-
 // Helper function to verify Basic Auth
 function verifyBasicAuth(request: NextRequest): { success: boolean; error?: string } {
   const authHeader = request.headers.get('Authorization');
@@ -53,19 +28,9 @@ function verifyBasicAuth(request: NextRequest): { success: boolean; error?: stri
   }
 }
 
-// OPTIONS - Handle CORS preflight requests
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  return NextResponse.json({}, { 
-    status: 200,
-    headers: getCorsHeaders(origin)
-  });
-}
-
 // GET - List all market updates with pagination, filtering, and sorting (PUBLIC)
 export async function GET(request: NextRequest) {
   try {
-    const origin = request.headers.get('origin');
     const { searchParams } = new URL(request.url);
     
     // Pagination params
@@ -183,12 +148,9 @@ export async function GET(request: NextRequest) {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
-    }, {
-      headers: getCorsHeaders(origin)
     });
   } catch (error: any) {
     console.error('Error fetching market updates:', error);
-    const origin = request.headers.get('origin');
     return NextResponse.json(
       { 
         success: false, 
@@ -196,7 +158,6 @@ export async function GET(request: NextRequest) {
       },
       { 
         status: 500,
-        headers: getCorsHeaders(origin)
       }
     );
   }
@@ -205,8 +166,6 @@ export async function GET(request: NextRequest) {
 // POST - Create a new market update (REQUIRES BASIC AUTH)
 export async function POST(request: NextRequest) {
   try {
-    const origin = request.headers.get('origin');
-    
     // Verify Basic Auth
     const auth = verifyBasicAuth(request);
     if (!auth.success) {
@@ -215,7 +174,6 @@ export async function POST(request: NextRequest) {
         { 
           status: 401, 
           headers: { 
-            ...getCorsHeaders(origin),
             'WWW-Authenticate': 'Basic realm="Market Updates API"' 
           } 
         }
@@ -248,7 +206,6 @@ export async function POST(request: NextRequest) {
         },
         { 
           status: 400,
-          headers: getCorsHeaders(origin)
         }
       );
     }
@@ -282,7 +239,6 @@ export async function POST(request: NextRequest) {
         },
         { 
           status: 400,
-          headers: getCorsHeaders(origin)
         }
       );
     }
@@ -303,12 +259,10 @@ export async function POST(request: NextRequest) {
       },
       { 
         status: 201,
-        headers: getCorsHeaders(origin)
       }
     );
   } catch (error: any) {
     console.error('Error creating market update:', error);
-    const origin = request.headers.get('origin');
     return NextResponse.json(
       { 
         success: false, 
@@ -316,7 +270,6 @@ export async function POST(request: NextRequest) {
       },
       { 
         status: 500,
-        headers: getCorsHeaders(origin)
       }
     );
   }
