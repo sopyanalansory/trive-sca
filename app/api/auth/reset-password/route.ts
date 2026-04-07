@@ -1,34 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import pool from '../../../../lib/db';
+import { hashPassword } from '../../../../lib/auth';
+import { normalizePhoneForDb, toMsisdn } from '../../../../lib/phone';
 
 const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5quLhTcsmnOC';
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
 const VERIHUBS_API_URL = 'https://api.verihubs.com/v2/whatsapp/otp';
-
-// Normalize phone number from database (handle 0062, 62, 0, etc.)
-function normalizePhoneForVerihubs(phone: string, countryCode: string): string {
-  // Remove all non-digit characters
-  let cleaned = phone.replace(/\D/g, '');
-  
-  // Remove country code variations (0062, 62)
-  if (cleaned.startsWith('0062')) {
-    cleaned = cleaned.substring(4);
-  } else if (cleaned.startsWith('62')) {
-    cleaned = cleaned.substring(2);
-  }
-  
-  // Remove leading zero
-  if (cleaned.startsWith('0')) {
-    cleaned = cleaned.substring(1);
-  }
-  
-  // Get country code digits (remove +)
-  const countryCodeDigits = countryCode.replace('+', '');
-  
-  // Combine: country code + normalized phone
-  return countryCodeDigits + cleaned;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,7 +67,8 @@ export async function POST(request: NextRequest) {
     const countryCodeFromDb = user.country_code || '+62';
 
     // Normalize phone number from database for Verihubs
-    const msisdn = normalizePhoneForVerihubs(phoneFromDb, countryCodeFromDb);
+    const normalizedPhone = normalizePhoneForDb(phoneFromDb);
+    const msisdn = toMsisdn(normalizedPhone, countryCodeFromDb);
 
     // Verify OTP via Verihubs
     try {

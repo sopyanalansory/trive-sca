@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { isValidLocalPhoneLength, normalizePhoneForDb, toMsisdn } from '@/lib/phone';
 
 const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5quLhTcsmnOC';
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
@@ -17,22 +18,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize phone number
-    const normalizePhoneNumber = (phoneNumber: string): string => {
-      let cleaned = phoneNumber.replace(/\D/g, '');
-      if (cleaned.startsWith('0')) {
-        cleaned = cleaned.substring(1);
-      } else if (cleaned.startsWith('62')) {
-        cleaned = cleaned.substring(2);
-      }
-      return cleaned;
-    };
-
-    const normalizedPhone = normalizePhoneNumber(phone);
-    const fullPhoneNumber = countryCode.replace('+', '') + normalizedPhone;
+    const normalizedPhone = normalizePhoneForDb(phone);
+    const fullPhoneNumber = toMsisdn(normalizedPhone, countryCode);
 
     // Validate phone length
-    if (normalizedPhone.length < 9 || normalizedPhone.length > 13) {
+    if (!isValidLocalPhoneLength(normalizedPhone)) {
       return NextResponse.json(
         { error: 'Nomor telepon tidak valid. Mohon masukkan nomor yang benar.' },
         { status: 400 }

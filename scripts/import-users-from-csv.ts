@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import pool from '../lib/db';
 import { hashPassword } from '../lib/auth';
+import { normalizePhoneForDb } from '../lib/phone';
 
 interface CSVRow {
   'Account ID': string;
@@ -72,28 +73,6 @@ function parseCSVLine(line: string): string[] {
   values.push(current.trim());
   
   return values;
-}
-
-// Normalize phone number (remove country code, leading zeros, non-digits)
-function normalizePhoneNumber(phone: string): string {
-  if (!phone) return '';
-  
-  // Remove all non-digit characters
-  let cleaned = phone.replace(/\D/g, '');
-  
-  // Remove country code (62 or 0062)
-  if (cleaned.startsWith('0062')) {
-    cleaned = cleaned.substring(4);
-  } else if (cleaned.startsWith('62')) {
-    cleaned = cleaned.substring(2);
-  }
-  
-  // Remove leading zero
-  if (cleaned.startsWith('0')) {
-    cleaned = cleaned.substring(1);
-  }
-  
-  return cleaned;
 }
 
 // Normalize email
@@ -184,7 +163,7 @@ async function importUsers() {
         
         // Normalize data
         const email = normalizeEmail(row.Email);
-        const phone = normalizePhoneNumber(row.Mobile);
+        const phone = normalizePhoneForDb(row.Mobile);
         const name = combineName(row['First Name'], row['Last Name'], row['Account Name']);
         
         // Validate required fields

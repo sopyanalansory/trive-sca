@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import pool from "../../../../lib/db";
+import { hashPassword } from "../../../../lib/auth";
+import { digitsOnly, normalizePhoneForDb } from "../../../../lib/phone";
 import {
   getLatestValidSalesforceToken,
   requestSalesforceAccessToken,
   saveSalesforceAccessToken,
-} from "@/lib/salesforce-oauth";
+} from "../../../../lib/salesforce-oauth";
 
 const SALESFORCE_SEARCH_CLIENT_FLOW_URL =
   process.env.SALESFORCE_SEARCH_CLIENT_FLOW_URL ||
@@ -14,14 +17,36 @@ type SalesforceFlowResult = {
   message?: string;
   outputValues?: {
     message?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    placeOfBirth?: string;
+    dateOfBirth?: string;
+    accountId?: string;
+    leadId?: string | null;
+    Flow__InterviewGuid?: string;
+    Flow__InterviewStatus?: string;
     [key: string]: unknown;
   };
   [key: string]: unknown;
 };
 
-function normalizePhone(phone: string): string {
-  return phone.replaceAll(/\D/g, "");
-}
+type SalesforceOutputValues = SalesforceFlowResult["outputValues"];
+
+type UserSyncPayload = {
+  fullname: string;
+  email: string;
+  phone: string;
+  salesforcePhone: string | null;
+  countryCode: string;
+  placeOfBirth: string | null;
+  dateOfBirth: string | null;
+  accountId: string | null;
+  leadId: string | null;
+  interviewGuid: string | null;
+  interviewStatus: string | null;
+};
 
 function hasRecordFoundMessage(value: unknown): boolean {
   if (typeof value !== "string") return false;
@@ -58,6 +83,101 @@ function parseIsClientFound(data: unknown): boolean {
   );
 }
 
+function pickRecordFoundOutputValues(data: unknown): SalesforceOutputValues | null {
+  const typedData = data as {
+    results?: SalesforceFlowResult[];
+    outputValues?: SalesforceOutputValues;
+  };
+
+  const results = Array.isArray(typedData?.results) ? typedData.results : [];
+  const foundResult = results.find((result) => isFoundFromResult(result));
+  if (foundResult?.outputValues) {
+    return foundResult.outputValues;
+  }
+
+  if (typedData?.outputValues && hasRecordFoundMessage(typedData.outputValues.message)) {
+    return typedData.outputValues;
+  }
+
+  if (Array.isArray(data)) {
+    const foundArrayResult = (data as SalesforceFlowResult[]).find((result) =>
+      isFoundFromResult(result)
+    );
+    if (foundArrayResult?.outputValues) {
+      return foundArrayResult.outputValues;
+    }
+  }
+
+  return null;
+}
+
+function normalizeDateOnly(value: string | undefined): string | null {
+  if (!value || typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsedDate = new Date(trimmed);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+  return parsedDate.toISOString().slice(0, 10);
+}
+
+function buildSyncPayload(
+  fallbackEmail: string,
+  fallbackPhone: string,
+  outputValues: SalesforceOutputValues | null
+): UserSyncPayload {
+  const sfEmail =
+    typeof outputValues?.email === "string" ? outputValues.email.toLowerCase().trim() : "";
+  const email = sfEmail || fallbackEmail;
+
+  const sfPhone = typeof outputValues?.phone === "string" ? outputValues.phone : "";
+  const salesforcePhone = sfPhone.trim() ? normalizePhoneForDb(sfPhone) : null;
+  const phone = salesforcePhone || normalizePhoneForDb(fallbackPhone);
+
+  const firstName = typeof outputValues?.firstName === "string" ? outputValues.firstName.trim() : "";
+  const lastName = typeof outputValues?.lastName === "string" ? outputValues.lastName.trim() : "";
+  const fullName = `${firstName} ${lastName === "-" ? "" : lastName}`.trim();
+
+  const placeOfBirth =
+    typeof outputValues?.placeOfBirth === "string" && outputValues.placeOfBirth.trim()
+      ? outputValues.placeOfBirth.trim()
+      : null;
+  const accountId =
+    typeof outputValues?.accountId === "string" && outputValues.accountId.trim()
+      ? outputValues.accountId.trim()
+      : null;
+  const leadId =
+    typeof outputValues?.leadId === "string" && outputValues.leadId.trim()
+      ? outputValues.leadId.trim()
+      : null;
+  const interviewGuid =
+    typeof outputValues?.Flow__InterviewGuid === "string" &&
+    outputValues.Flow__InterviewGuid.trim()
+      ? outputValues.Flow__InterviewGuid.trim()
+      : null;
+  const interviewStatus =
+    typeof outputValues?.Flow__InterviewStatus === "string" &&
+    outputValues.Flow__InterviewStatus.trim()
+      ? outputValues.Flow__InterviewStatus.trim()
+      : null;
+
+  return {
+    fullname: fullName || email.split("@")[0] || "User",
+    email,
+    phone,
+    salesforcePhone,
+    countryCode: "+62",
+    placeOfBirth,
+    dateOfBirth: normalizeDateOnly(
+      typeof outputValues?.dateOfBirth === "string" ? outputValues.dateOfBirth : undefined
+    ),
+    accountId,
+    leadId,
+    interviewGuid,
+    interviewStatus,
+  };
+}
+
 async function callSalesforceFlow(
   token: string,
   email: string,
@@ -81,6 +201,108 @@ async function callSalesforceFlow(
   });
 }
 
+async function getAvailableUserColumns(columnNames: string[]): Promise<Set<string>> {
+  const result = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_name = 'users' AND column_name = ANY($1::text[])`,
+    [columnNames]
+  );
+  return new Set(result.rows.map((row: { column_name: string }) => row.column_name));
+}
+
+async function saveOrSyncSalesforceUser(payload: UserSyncPayload): Promise<void> {
+  const defaultPasswordHash = await hashPassword("TempPassword123!");
+  const optionalColumns = [
+    "place_of_birth",
+    "date_of_birth",
+    "account_id",
+    "lead_id",
+    "salesforce_interview_guid",
+    "salesforce_interview_status",
+  ];
+  const availableColumns = await getAvailableUserColumns(optionalColumns);
+
+  const insertColumns = [
+    "fullname",
+    "email",
+    "phone",
+    "country_code",
+    "password_hash",
+    "marketing_consent",
+    "terms_consent",
+    "email_verified",
+    "phone_verified",
+  ];
+  const insertValues: (string | boolean | null)[] = [
+    payload.fullname,
+    payload.email,
+    payload.phone,
+    payload.countryCode,
+    defaultPasswordHash,
+    true,
+    true,
+    true,
+    true,
+  ];
+
+  const appendOptionalInsert = (column: string, value: string | null) => {
+    if (!availableColumns.has(column)) return;
+    insertColumns.push(column);
+    insertValues.push(value);
+  };
+
+  appendOptionalInsert("place_of_birth", payload.placeOfBirth);
+  appendOptionalInsert("date_of_birth", payload.dateOfBirth);
+  appendOptionalInsert("account_id", payload.accountId);
+  appendOptionalInsert("lead_id", payload.leadId);
+  appendOptionalInsert("salesforce_interview_guid", payload.interviewGuid);
+  appendOptionalInsert("salesforce_interview_status", payload.interviewStatus);
+
+  await pool.query(
+    `INSERT INTO users
+      (${insertColumns.join(", ")})
+     VALUES (${insertValues.map((_, index) => `$${index + 1}`).join(", ")})
+     ON CONFLICT (email) DO NOTHING`,
+    insertValues
+  );
+
+  const updateParts: string[] = ["fullname = $1", "country_code = $2"];
+  const updateValues: (string | null)[] = [payload.fullname, payload.countryCode];
+  let paramIndex = 3;
+
+  if (payload.salesforcePhone) {
+    updateParts.push(`phone = $${paramIndex}`);
+    updateValues.push(payload.salesforcePhone);
+    paramIndex += 1;
+  }
+
+  const pushOverwriteUpdate = (column: string, value: string | null) => {
+    if (!value || !availableColumns.has(column)) return;
+    updateParts.push(`${column} = $${paramIndex}`);
+    updateValues.push(value);
+    paramIndex += 1;
+  };
+
+  if (payload.dateOfBirth && availableColumns.has("date_of_birth")) {
+    updateParts.push(`date_of_birth = $${paramIndex}::date`);
+    updateValues.push(payload.dateOfBirth);
+    paramIndex += 1;
+  }
+  pushOverwriteUpdate("place_of_birth", payload.placeOfBirth);
+  pushOverwriteUpdate("account_id", payload.accountId);
+  pushOverwriteUpdate("lead_id", payload.leadId);
+  pushOverwriteUpdate("salesforce_interview_guid", payload.interviewGuid);
+  pushOverwriteUpdate("salesforce_interview_status", payload.interviewStatus);
+
+  await pool.query(
+    `UPDATE users
+     SET ${updateParts.join(", ")}, updated_at = CURRENT_TIMESTAMP
+     WHERE email = $${paramIndex}`,
+    [...updateValues, payload.email]
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -88,7 +310,7 @@ export async function POST(request: NextRequest) {
     const rawPhone = typeof body?.phone === "string" ? body.phone : "";
 
     const email = rawEmail.toLowerCase().trim();
-    const phone = normalizePhone(rawPhone);
+    const phone = digitsOnly(rawPhone);
 
     if (!email || !phone) {
       return NextResponse.json(
@@ -147,6 +369,12 @@ export async function POST(request: NextRequest) {
     }
 
     const found = parseIsClientFound(parsed);
+    if (found) {
+      const outputValues = pickRecordFoundOutputValues(parsed);
+      const syncPayload = buildSyncPayload(email, phone, outputValues);
+      await saveOrSyncSalesforceUser(syncPayload);
+    }
+
     return NextResponse.json(
       {
         found,
