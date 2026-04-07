@@ -2,17 +2,29 @@
 // If you hit CORS issues with a remote API, enable the built-in proxy:
 // - NEXT_PUBLIC_USE_API_PROXY=true (frontend)
 // - API_PROXY_TARGET=https://api.domain.com (server env)
-const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
-const useProxy = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true';
+// With NEXT_PUBLIC_BASE_PATH (e.g. /sca), same-origin paths must include that prefix.
+import { getPublicBasePath } from "@/lib/public-base-path";
+
+const appBase = getPublicBasePath();
+const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+const useProxy = process.env.NEXT_PUBLIC_USE_API_PROXY === "true";
+
+function withAppBase(path: string): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (!appBase) return p;
+  return `${appBase}${p}`;
+}
 
 export function buildApiUrl(path: string): string {
   if (!path) {
-    return '';
+    return "";
   }
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   if (useProxy) {
-    // Route through Next.js API proxy to avoid browser CORS
-    return `/api/proxy${normalizedPath}`;
+    return withAppBase(`/api/proxy${normalizedPath}`);
   }
-  return `${baseUrl}${normalizedPath}`;
+  if (baseUrl) {
+    return `${baseUrl}${normalizedPath}`;
+  }
+  return withAppBase(normalizedPath);
 }
