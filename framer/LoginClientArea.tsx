@@ -2,6 +2,7 @@ import * as React from "react"
 // Host Framer menyediakan modul ini di Code Component (tidak ada di Next.js).
 // @ts-expect-error — types tidak terpasang di repo ini
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { AuthPageFooter } from "./AuthPageFooter.tsx"
 
 const API_BASE = "https://api.trive.co.id/api"
 const BASE = "https://www.triveinvest.co.id/sca"
@@ -252,13 +253,36 @@ function LoginClientArea(props: LoginClientAreaProps) {
                     .login-col-layout { flex-direction: column !important; }
                     .login-left-col { width: 100% !important; max-width: 100% !important; }
                     .login-right-col { width: 100% !important; max-width: 100% !important; }
+                    .login-left-col { padding: 40px 28px 24px !important; }
+                    .login-right-col { padding: 20px 20px 40px !important; }
+                    .login-card { padding: 48px 40px !important; }
+                    .login-main-heading { font-size: 2rem !important; margin-bottom: 16px !important; }
+                    .login-main-copy { font-size: 16px !important; line-height: 1.5 !important; }
+                    .login-form-title { font-size: 1.9rem !important; margin-bottom: 20px !important; }
+                    .login-card input { height: 50px !important; font-size: 14px !important; }
                     .login-remember-row { flex-direction: column !important; align-items: stretch !important; }
+                    .login-remember-row { gap: 12px !important; }
                     .login-submit-btn { width: 100% !important; }
+                    .login-submit-btn { min-height: 48px !important; min-width: 100% !important; }
                     .login-mobile-forgot { display: inline !important; }
                     .login-bubbles-wrap { width: 90px !important; height: 80px !important; }
                 }
+                @media (max-width: 767px) {
+                    .login-left-col { padding: 28px 16px 18px !important; }
+                    .login-right-col { padding: 14px 12px 28px !important; }
+                    .login-card { padding: 34px 18px !important; border-radius: 12px !important; }
+                    .login-main-heading { font-size: 1.6rem !important; line-height: 1.25 !important; margin-bottom: 12px !important; }
+                    .login-main-copy { font-size: 14px !important; line-height: 1.45 !important; }
+                    .login-form-title { font-size: 1.55rem !important; margin-bottom: 16px !important; }
+                    .login-card input { height: 48px !important; padding-left: 18px !important; padding-right: 18px !important; }
+                    .login-submit-btn { font-size: 14px !important; padding: 14px 20px 12px !important; }
+                }
                 @media (min-width: 1024px) {
                     .login-mobile-forgot { display: none !important; }
+                }
+                .login-form-footer-wrap { margin-top: 16px; }
+                @media (min-width: 640px) {
+                    .login-form-footer-wrap { margin-top: 24px; }
                 }
                 .login-submit-btn:not(:disabled) {
                     transition: transform 0.12s ease, background-color 0.12s ease;
@@ -338,6 +362,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                             }}
                         >
                             <h1
+                                className="login-main-heading"
                                 style={{
                                     fontSize: "2.25rem",
                                     fontWeight: 500,
@@ -352,6 +377,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                 </span>
                             </h1>
                             <p
+                                className="login-main-copy"
                                 style={{
                                     fontSize: "18px",
                                     color: "#000000",
@@ -412,6 +438,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                             }}
                         >
                             <div
+                                className="login-card"
                                 style={{
                                     backgroundColor: "rgba(255,255,255,0.7)",
                                     padding: "77px 60px",
@@ -423,6 +450,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                 }}
                             >
                                 <h2
+                                    className="login-form-title"
                                     style={{
                                         fontSize: "2.25rem",
                                         fontWeight: 500,
@@ -823,6 +851,16 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                         </a>
                                     </div>
                                 </form>
+                            </div>
+                            <div
+                                className="login-form-footer-wrap"
+                                style={{
+                                    width: "100%",
+                                    position: "relative",
+                                    zIndex: 10,
+                                }}
+                            >
+                                <AuthPageFooter />
                             </div>
                         </div>
                     </div>

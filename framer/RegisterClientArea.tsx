@@ -2,6 +2,7 @@ import * as React from "react"
 // Host Framer menyediakan modul ini di Code Component (tidak ada di Next.js).
 // @ts-expect-error — types tidak terpasang di repo ini
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
+import { AuthPageFooter } from "./AuthPageFooter.tsx"
 
 interface RegisterSuccessResponse {
     token?: string
@@ -417,11 +418,29 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                     .register-col-layout { flex-direction: column !important; }
                     .register-left-col { width: 100% !important; max-width: 100% !important; }
                     .register-right-col { width: 100% !important; max-width: 100% !important; }
+                    .register-left-col { padding: 40px 28px 24px !important; }
+                    .register-right-col { padding: 20px 20px 40px !important; }
+                    .register-card { padding: 48px 40px !important; }
+                    .register-main-heading { font-size: 2rem !important; margin-bottom: 16px !important; }
+                    .register-main-copy { font-size: 16px !important; line-height: 1.5 !important; }
+                    .register-form-title { font-size: 1.9rem !important; margin-bottom: 20px !important; }
+                    .register-card input { height: 50px !important; font-size: 14px !important; }
                     .register-verify-row { flex-wrap: wrap !important; }
                     .register-verify-btn { flex: 1 1 auto !important; min-width: 0 !important; }
                     .register-submit-wrap { width: 100% !important; }
                     .register-submit-btn { width: 100% !important; }
+                    .register-submit-btn { min-height: 48px !important; min-width: 100% !important; }
                     .register-bubbles-wrap { width: 90px !important; height: 80px !important; }
+                }
+                @media (max-width: 767px) {
+                    .register-left-col { padding: 28px 16px 18px !important; }
+                    .register-right-col { padding: 14px 12px 28px !important; }
+                    .register-card { padding: 34px 18px !important; border-radius: 12px !important; }
+                    .register-main-heading { font-size: 1.6rem !important; line-height: 1.25 !important; margin-bottom: 12px !important; }
+                    .register-main-copy { font-size: 14px !important; line-height: 1.45 !important; }
+                    .register-form-title { font-size: 1.55rem !important; margin-bottom: 16px !important; }
+                    .register-card input { height: 48px !important; padding-left: 18px !important; padding-right: 18px !important; }
+                    .register-submit-btn { font-size: 14px !important; padding: 14px 20px 12px !important; }
                 }
                 .register-submit-btn:not(:disabled) {
                     transition: transform 0.12s ease, background-color 0.12s ease;
@@ -431,6 +450,10 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                 }
                 .register-submit-btn:not(:disabled):active {
                     transform: scale(0.98);
+                }
+                .register-form-footer-wrap { margin-top: 16px; }
+                @media (min-width: 640px) {
+                    .register-form-footer-wrap { margin-top: 24px; }
                 }
             `}</style>
 
@@ -500,6 +523,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                             }}
                         >
                             <h1
+                                className="register-main-heading"
                                 style={{
                                     fontSize: "2.25rem",
                                     fontWeight: 500,
@@ -514,6 +538,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                 </span>
                             </h1>
                             <p
+                                className="register-main-copy"
                                 style={{
                                     fontSize: "18px",
                                     color: "#000000",
@@ -573,6 +598,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                             }}
                         >
                             <div
+                                className="register-card"
                                 style={{
                                     backgroundColor: "rgba(255,255,255,0.7)",
                                     padding: "77px 60px",
@@ -584,6 +610,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                 }}
                             >
                                 <h2
+                                    className="register-form-title"
                                     style={{
                                         fontSize: "2.25rem",
                                         fontWeight: 500,
@@ -1340,6 +1367,16 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                         </a>
                                     </div>
                                 </form>
+                            </div>
+                            <div
+                                className="register-form-footer-wrap"
+                                style={{
+                                    width: "100%",
+                                    position: "relative",
+                                    zIndex: 10,
+                                }}
+                            >
+                                <AuthPageFooter />
                             </div>
                         </div>
                     </div>
