@@ -129,6 +129,23 @@ function LoginClientArea(props: LoginClientAreaProps) {
         if (passwordError) validatePassword(e.target.value)
     }
 
+    const buildForgotPasswordUrl = (emailValue: string): string => {
+        const trimmedEmail = emailValue.trim()
+        if (!trimmedEmail) return forgotPasswordUrl
+        const encodedEmail = encodeURIComponent(trimmedEmail)
+        return forgotPasswordUrl.includes("?")
+            ? `${forgotPasswordUrl}&email=${encodedEmail}`
+            : `${forgotPasswordUrl}?email=${encodedEmail}`
+    }
+
+    const handleForgotPasswordClick = () => {
+        if (globalThis.window === undefined) return
+        const trimmedEmail = email.trim()
+        if (!trimmedEmail) return
+        localStorage.setItem("lastLoginEmail", trimmedEmail)
+        localStorage.setItem("forgotPasswordEmail", trimmedEmail)
+    }
+
     const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const isChecked = e.target.checked
         setRememberMe(isChecked)
@@ -722,7 +739,12 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                                     }}
                                                 >
                                                     <a
-                                                        href={forgotPasswordUrl}
+                                                        href={buildForgotPasswordUrl(
+                                                            email
+                                                        )}
+                                                        onClick={
+                                                            handleForgotPasswordClick
+                                                        }
                                                         style={linkStyle}
                                                     >
                                                         Reset password dengan
@@ -788,7 +810,12 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                                 </label>
                                             </div>
                                             <a
-                                                href={forgotPasswordUrl}
+                                                href={buildForgotPasswordUrl(
+                                                    email
+                                                )}
+                                                onClick={
+                                                    handleForgotPasswordClick
+                                                }
                                                 className="login-mobile-forgot"
                                                 style={{
                                                     ...linkStyle,

@@ -5,6 +5,7 @@ import { addPropertyControls, ControlType } from "framer"
 import { AuthPageFooter } from "./AuthPageFooter.tsx"
 
 const BASE = "https://www.triveinvest.co.id/sca"
+const API_BASE = "https://api.trive.co.id/api"
 
 interface SendOtpResponse {
     error?: string
@@ -31,8 +32,8 @@ type ForgotPasswordClientAreaProps = {
 
 function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
     const {
-        sendResetPasswordOtpApiUrl = `${BASE}/api/auth/send-reset-password-otp`,
-        resetPasswordApiUrl = `${BASE}/api/auth/reset-password`,
+        sendResetPasswordOtpApiUrl = `${API_BASE}/auth/send-reset-password-otp`,
+        resetPasswordApiUrl = `${API_BASE}/auth/reset-password`,
         pageBgColor = "#69d7f6",
         logoUrl = "https://cdn2.triveinvest.co.id/assets/img/sca/logo.svg",
         homeUrl = `${BASE}/`,
@@ -42,8 +43,9 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         fullViewport = false,
     } = props
 
-    const [step, setStep] = React.useState<"email" | "otp">("email")
+    const [step, setStep] = React.useState<"request" | "otp">("request")
     const [email, setEmail] = React.useState("")
+    const [phone, setPhone] = React.useState("")
     const [otp, setOtp] = React.useState("")
     const [newPassword, setNewPassword] = React.useState("")
     const [confirmPassword, setConfirmPassword] = React.useState("")
@@ -54,8 +56,22 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
     const [error, setError] = React.useState("")
     const [success, setSuccess] = React.useState("")
     const [emailError, setEmailError] = React.useState("")
+    const [phoneError, setPhoneError] = React.useState("")
     const [passwordError, setPasswordError] = React.useState("")
     const [otpError, setOtpError] = React.useState("")
+
+    React.useEffect(() => {
+        if (globalThis.window === undefined) return
+        const params = new URLSearchParams(globalThis.window.location.search)
+        const emailFromQuery = params.get("email") || ""
+        const emailFromStorage =
+            localStorage.getItem("forgotPasswordEmail") ||
+            localStorage.getItem("lastLoginEmail") ||
+            localStorage.getItem("rememberedEmail") ||
+            ""
+        const resolvedEmail = (emailFromQuery || emailFromStorage).trim()
+        setEmail(resolvedEmail)
+    }, [])
 
     const validateEmail = (emailValue: string): boolean => {
         if (!emailValue.trim()) {
@@ -68,6 +84,20 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
             return false
         }
         setEmailError("")
+        return true
+    }
+
+    const validatePhone = (phoneValue: string): boolean => {
+        const normalizedPhone = phoneValue.replaceAll(/\D/g, "")
+        if (!normalizedPhone) {
+            setPhoneError("Nomor HP diperlukan")
+            return false
+        }
+        if (normalizedPhone.length < 9 || normalizedPhone.length > 14) {
+            setPhoneError("Nomor HP tidak valid")
+            return false
+        }
+        setPhoneError("")
         return true
     }
 
@@ -101,6 +131,10 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
             return
         }
 
+        if (!validatePhone(phone)) {
+            return
+        }
+
         setIsSendingOtp(true)
         setError("")
         setSuccess("")
@@ -113,6 +147,8 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                 },
                 body: JSON.stringify({
                     email: email.trim(),
+                    phone: phone.replaceAll(/\D/g, ""),
+                    phoneNumber: phone.replaceAll(/\D/g, ""),
                 }),
             })
 
@@ -189,9 +225,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                 return
             }
 
-            setSuccess(
-                data.message || "Password berhasil direset"
-            )
+            setSuccess(data.message || "Password berhasil direset")
 
             setTimeout(() => {
                 if (globalThis.window !== undefined) {
@@ -542,12 +576,12 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                         margin: "0 0 24px 0",
                                     }}
                                 >
-                                    {step === "email"
+                                    {step === "request"
                                         ? "Lupa Kata Sandi"
                                         : "Reset Kata Sandi"}
                                 </h2>
 
-                                {step === "email" ? (
+                                {step === "request" ? (
                                     <form
                                         onSubmit={handleSendOtp}
                                         style={{
@@ -556,7 +590,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             gap: "16px",
                                         }}
                                     >
-                                        <p
+                                        {/* <p
                                             className="forgot-form-copy"
                                             style={{
                                                 fontSize: "14px",
@@ -564,9 +598,11 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 margin: "0 0 4px 0",
                                             }}
                                         >
-                                            Masukkan email Anda. Kami akan
-                                            mengirim kode OTP ke WhatsApp Anda.
-                                        </p>
+                                            Jika email Anda tersimpan dari halaman
+                                            login, kolom email akan terisi otomatis.
+                                            Anda juga bisa isi manual. Lalu masukkan
+                                            nomor HP untuk kirim OTP via WhatsApp.
+                                        </p> */}
                                         <div>
                                             <input
                                                 type="email"
@@ -578,9 +614,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     setEmailError("")
                                                     setError("")
                                                 }}
-                                                onBlur={() =>
-                                                    validateEmail(email)
-                                                }
+                                                onBlur={() => validateEmail(email)}
                                                 placeholder="Email"
                                                 autoComplete="email"
                                                 className="forgot-input"
@@ -600,6 +634,45 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     }}
                                                 >
                                                     {emailError}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="tel"
+                                                id="forgot-phone"
+                                                name="phone"
+                                                inputMode="numeric"
+                                                value={phone}
+                                                onChange={(e) => {
+                                                    setPhone(
+                                                        e.target.value
+                                                            .replaceAll(/\s+/g, "")
+                                                            .slice(0, 16)
+                                                    )
+                                                    setPhoneError("")
+                                                    setError("")
+                                                }}
+                                                onBlur={() => validatePhone(phone)}
+                                                placeholder="Nomor HP"
+                                                autoComplete="tel"
+                                                className="forgot-input"
+                                                style={{
+                                                    ...inputBase,
+                                                    border: phoneError
+                                                        ? "1px solid #ef4444"
+                                                        : "1px solid #ffffff",
+                                                }}
+                                            />
+                                            {phoneError && (
+                                                <p
+                                                    style={{
+                                                        color: "#ef4444",
+                                                        fontSize: "12px",
+                                                        margin: "4px 0 0 8px",
+                                                    }}
+                                                >
+                                                    {phoneError}
                                                 </p>
                                             )}
                                         </div>
@@ -650,9 +723,10 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     cursor: isSendingOtp
                                                         ? "not-allowed"
                                                         : "pointer",
-                                                    backgroundColor: isSendingOtp
-                                                        ? "#d1d5db"
-                                                        : "#2b2c24",
+                                                    backgroundColor:
+                                                        isSendingOtp
+                                                            ? "#d1d5db"
+                                                            : "#2b2c24",
                                                     color: isSendingOtp
                                                         ? "#9ca3af"
                                                         : "#ffffff",
@@ -660,7 +734,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             >
                                                 {isSendingOtp
                                                     ? "Mengirim..."
-                                                    : "Kirim Kode OTP"}
+                                                    : "Submit"}
                                             </button>
                                         </div>
 
@@ -1033,13 +1107,15 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    setStep("email")
+                                                    setStep("request")
                                                     setOtp("")
+                                                    setPhone("")
                                                     setNewPassword("")
                                                     setConfirmPassword("")
                                                     setError("")
                                                     setSuccess("")
                                                     setOtpError("")
+                                                    setPhoneError("")
                                                     setPasswordError("")
                                                 }}
                                                 style={linkStyle}
@@ -1069,8 +1145,8 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
 }
 
 ForgotPasswordClientArea.defaultProps = {
-    sendResetPasswordOtpApiUrl: `${BASE}/api/auth/send-reset-password-otp`,
-    resetPasswordApiUrl: `${BASE}/api/auth/reset-password`,
+    sendResetPasswordOtpApiUrl: `${API_BASE}/auth/send-reset-password-otp`,
+    resetPasswordApiUrl: `${API_BASE}/auth/reset-password`,
     pageBgColor: "#69d7f6",
     logoUrl: "https://cdn2.triveinvest.co.id/assets/img/sca/logo.svg",
     homeUrl: `${BASE}/`,
@@ -1085,14 +1161,14 @@ addPropertyControls(ForgotPasswordClientArea, {
     sendResetPasswordOtpApiUrl: {
         type: ControlType.String,
         title: "POST send-reset-password-otp",
-        defaultValue: `${BASE}/api/auth/send-reset-password-otp`,
-        placeholder: "https://…/api/auth/send-reset-password-otp",
+        defaultValue: `${API_BASE}/auth/send-reset-password-otp`,
+        placeholder: "https://…/auth/send-reset-password-otp",
     },
     resetPasswordApiUrl: {
         type: ControlType.String,
         title: "POST reset-password",
-        defaultValue: `${BASE}/api/auth/reset-password`,
-        placeholder: "https://…/api/auth/reset-password",
+        defaultValue: `${API_BASE}/auth/reset-password`,
+        placeholder: "https://…/auth/reset-password",
     },
     pageBgColor: {
         type: ControlType.Color,
