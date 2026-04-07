@@ -19,6 +19,9 @@
     "migrate-market-updates-nullable": "tsx lib/run-market-updates-nullable-migration.ts",
     "migrate-add-profile-fields": "tsx lib/run-add-profile-fields-migration.ts",
     "migrate-investment-account": "tsx lib/run-investment-account-migration.ts",
+    "migrate-salesforce-oauth-token": "tsx lib/run-salesforce-oauth-token-migration.ts",
+    "refresh-salesforce-token": "tsx scripts/refresh-salesforce-token.ts",
+    "setup-salesforce-cron": "tsx scripts/setup-salesforce-cron.ts",
     "generate-favicon": "node scripts/generate-favicon.js"
   },
   "dependencies": {

@@ -84,3 +84,68 @@ sudo ./scripts/setup-ssl-selfsigned.sh
 - [Production Setup](./PRODUCTION_SETUP.md) - Konfigurasi production
 - [HTTPS Setup](./HTTPS_SETUP.md) - Setup HTTPS dengan SSL certificate
 - [HTTPS Quick Start](./HTTPS_QUICK_START.md) - Quick reference untuk HTTPS
+
+## Salesforce Token Cron (12 jam)
+
+Project ini sudah support refresh token Salesforce otomatis tiap 12 jam.
+
+1. Jalankan migrasi tabel token:
+
+```bash
+npm run migrate-salesforce-oauth-token
+```
+
+2. Set environment variables:
+
+- `CRON_SECRET`
+- `SALESFORCE_CLIENT_ID`
+- `SALESFORCE_CLIENT_SECRET`
+- `SALESFORCE_USERNAME`
+- `SALESFORCE_PASSWORD`
+- `SALESFORCE_AUTH_DOMAIN` (opsional, default `https://login.salesforce.com`)
+
+3. Jalankan manual (test):
+
+```bash
+npm run refresh-salesforce-token
+```
+
+4. Setup cron di VPS (Alibaba Linux/Ubuntu):
+
+```bash
+crontab -e
+```
+
+Tambahkan baris berikut (sesuaikan path project dan path npm):
+
+```bash
+0 */12 * * * cd /path/to/trive-sca && /usr/bin/npm run refresh-salesforce-token >> /var/log/trive-salesforce-token.log 2>&1
+```
+
+Atau auto-setup dari script:
+
+```bash
+cd /path/to/trive-sca
+npm run setup-salesforce-cron
+```
+
+Opsional override:
+
+```bash
+CRON_PROJECT_PATH=/path/to/trive-sca \
+CRON_SCHEDULE="0 */12 * * *" \
+CRON_NPM_PATH=/usr/bin/npm \
+CRON_LOG_PATH=/var/log/trive-salesforce-token.log \
+npm run setup-salesforce-cron
+```
+
+5. (Opsional) Trigger via endpoint internal:
+
+- `GET /api/internal/salesforce-token/refresh` (bisa dipanggil oleh cron berbasis curl/wget)
+- `POST /api/internal/salesforce-token/refresh` (opsional untuk trigger manual)
+
+Route ini butuh header `Authorization: Bearer <CRON_SECRET>`.
+
+> Catatan:
+> - Karena deploy di VPS (bukan Vercel), `vercel.json` tidak dipakai oleh server VPS.
+> - Gunakan Linux `crontab` seperti contoh di atas sebagai scheduler utama.
