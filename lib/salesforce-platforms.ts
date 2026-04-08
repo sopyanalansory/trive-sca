@@ -120,6 +120,21 @@ function normalizeSwapFree(swapFree: string): string {
   return "Tidak";
 }
 
+function normalizeNullableText(value: string | null): string | null {
+  if (value === null) return null;
+  const normalized = value.trim().toLowerCase();
+  if (
+    normalized === "" ||
+    normalized === "-" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "null"
+  ) {
+    return null;
+  }
+  return value;
+}
+
 function inferTypeFromClientGroupName(clientGroupName: string | null): string | null {
   if (!clientGroupName) return null;
   const normalized = clientGroupName.trim().toLowerCase();
@@ -319,8 +334,9 @@ export async function fetchAndPersistPlatformsForUser(
       pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
     const leverage =
       pickRowString(row, ["leverage", "Leverage", "Leverage__c"]) || null;
-    const nickname =
-      pickRowString(row, ["nickname", "Nickname", "Nickname__c"]) || null;
+    const nickname = normalizeNullableText(
+      pickRowString(row, ["nickname", "Nickname", "Nickname__c"]) || null
+    );
     const fixRate =
       pickRowString(row, ["fixRate", "FixRate", "Fix_Rate__c"]) || null;
     const swapFree = normalizeSwapFree(
