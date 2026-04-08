@@ -56,6 +56,7 @@ const defaultWindows =
     "https://download.mql5.com/cdn/web/22794/mt5/triveinvest5setup.exe"
 const defaultAppleMobile =
     "https://download.mql5.com/cdn/mobile/mt5/ios?server=TriveInvest-MT5-Live"
+const collapsedLogoUrl = "https://cdn2.triveinvest.co.id/assets/img/sca/sayap.png"
 function PlatformClientArea(props: PlatformClientAreaProps) {
     const {
         meApiUrl = `${API_BASE}/auth/me`,
@@ -354,21 +355,27 @@ function PlatformClientArea(props: PlatformClientAreaProps) {
                             borderBottom: "1px solid #334155",
                         }}
                     >
-                        {showExpandedSidebar && (
-                            <a href={accountsUrl} style={{ display: "block" }}>
-                                <img
-                                    src={logoUrl}
-                                    alt="Trive Invest"
-                                    width={140}
-                                    height={47}
-                                    style={{
-                                        width: 140,
-                                        height: "auto",
-                                        display: "block",
-                                    }}
-                                />
-                            </a>
-                        )}
+                        <a
+                            href={accountsUrl}
+                            style={{
+                                display: "flex",
+                                justifyContent: showExpandedSidebar
+                                    ? "flex-start"
+                                    : "center",
+                            }}
+                        >
+                            <img
+                                src={showExpandedSidebar ? logoUrl : collapsedLogoUrl}
+                                alt="Trive Invest"
+                                width={showExpandedSidebar ? 140 : 32}
+                                height={showExpandedSidebar ? 47 : 32}
+                                style={{
+                                    width: showExpandedSidebar ? 140 : 32,
+                                    height: showExpandedSidebar ? "auto" : 32,
+                                    display: "block",
+                                }}
+                            />
+                        </a>
                     </div>
 
                     <button

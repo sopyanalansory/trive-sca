@@ -31,7 +31,7 @@ interface AccountRow {
     nickname?: string | null
     leverage?: string | number
     conversionRate?: string | number
-    kursKonversi?: string | number
+    fixRate?: string | number
 }
 
 type AccountTab = "live" | "demo"
@@ -68,6 +68,8 @@ function isPreviewLike(): boolean {
         rt !== RenderTarget.thumbnail
     )
 }
+
+const collapsedLogoUrl = "https://cdn2.triveinvest.co.id/assets/img/sca/sayap.png"
 
 function AccountsDashboard(props: AccountsDashboardProps) {
     const {
@@ -426,21 +428,27 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                             borderBottom: "1px solid #334155",
                         }}
                     >
-                        {showExpandedSidebar && (
-                            <a href={accountsUrl} style={{ display: "block" }}>
-                                <img
-                                    src={logoUrl}
-                                    alt="Trive Invest"
-                                    width={140}
-                                    height={47}
-                                    style={{
-                                        width: 140,
-                                        height: "auto",
-                                        display: "block",
-                                    }}
-                                />
-                            </a>
-                        )}
+                        <a
+                            href={accountsUrl}
+                            style={{
+                                display: "flex",
+                                justifyContent: showExpandedSidebar
+                                    ? "flex-start"
+                                    : "center",
+                            }}
+                        >
+                            <img
+                                src={showExpandedSidebar ? logoUrl : collapsedLogoUrl}
+                                alt="Trive Invest"
+                                width={showExpandedSidebar ? 140 : 32}
+                                height={showExpandedSidebar ? 47 : 32}
+                                style={{
+                                    width: showExpandedSidebar ? 140 : 32,
+                                    height: showExpandedSidebar ? "auto" : 32,
+                                    display: "block",
+                                }}
+                            />
+                        </a>
                     </div>
 
                     <button
@@ -1326,7 +1334,8 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                         key={h}
                                                         style={{
                                                             textAlign: "left",
-                                                            padding: "12px 10px",
+                                                            padding:
+                                                                "12px 10px",
                                                             fontSize: 13,
                                                             fontWeight: 600,
                                                             color: "#475569",
@@ -1350,7 +1359,8 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                 >
                                                     <td
                                                         style={{
-                                                            padding: "14px 10px",
+                                                            padding:
+                                                                "14px 10px",
                                                             fontSize: 13,
                                                             color: "#111827",
                                                         }}
@@ -1365,7 +1375,8 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                     </td>
                                                     <td
                                                         style={{
-                                                            padding: "14px 10px",
+                                                            padding:
+                                                                "14px 10px",
                                                             fontSize: 13,
                                                             color: "#111827",
                                                         }}
@@ -1376,7 +1387,8 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                     </td>
                                                     <td
                                                         style={{
-                                                            padding: "14px 10px",
+                                                            padding:
+                                                                "14px 10px",
                                                             fontSize: 13,
                                                             color: "#111827",
                                                         }}
@@ -1387,13 +1399,14 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                     </td>
                                                     <td
                                                         style={{
-                                                            padding: "14px 10px",
+                                                            padding:
+                                                                "14px 10px",
                                                             fontSize: 13,
                                                             color: "#111827",
                                                         }}
                                                     >
                                                         {account.conversionRate ??
-                                                            account.kursKonversi ??
+                                                            account.fixRate ??
                                                             "-"}
                                                     </td>
                                                 </tr>
