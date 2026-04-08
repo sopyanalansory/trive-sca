@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
           lang_code: 'id',
           template_name: 'trive_invest_wba',
           callback_url: process.env.VERIHUBS_CALLBACK_URL || 'https://google.com',
-          otp_length: '5',
+          otp_length: '4',
         }),
       });
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       // Save verification code reference to database for tracking
       const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 10); // Code expires in 10 minutes
+      expiresAt.setMinutes(expiresAt.getMinutes() + 2); // Code expires in 2 minutes
 
       await pool.query(
         `INSERT INTO verification_codes (phone, code, expires_at)

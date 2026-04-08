@@ -292,12 +292,12 @@ export default function ForgotPasswordPage() {
                         name="otp"
                         value={otp}
                         onChange={(e) => {
-                          setOtp(e.target.value.replace(/\D/g, "").slice(0, 5));
+                          setOtp(e.target.value.replace(/\D/g, "").slice(0, 4));
                           setOtpError("");
                           setError("");
                         }}
-                        placeholder="Kode OTP (5 digit)"
-                        maxLength={5}
+                        placeholder="Kode OTP (4 digit)"
+                        maxLength={4}
                         className={`w-full bg-white border rounded-[70px] shadow-none text-[#24252c] text-sm h-[53px] pl-6 pb-0 outline-none placeholder:text-[#9ca3af] focus:outline-none ${
                           otpError ? "border-red-500" : "border-white"
                         }`}
