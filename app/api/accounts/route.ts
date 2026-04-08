@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         server_name,
         status,
         currency,
+        nickname,
         leverage,
         type
       FROM platforms 
@@ -54,13 +55,9 @@ export async function GET(request: NextRequest) {
 
       if (accountOrLeadId) {
         try {
-          const userAccountId = decoded.accountId
-            ? String(decoded.accountId).trim()
-            : null;
           await fetchAndPersistPlatformsForUser(
             decoded.userId,
-            accountOrLeadId,
-            userAccountId
+            accountOrLeadId
           );
           result = await pool.query(
             `SELECT 
@@ -71,6 +68,7 @@ export async function GET(request: NextRequest) {
               server_name,
               status,
               currency,
+              nickname,
               leverage,
               type
             FROM platforms 
@@ -105,6 +103,7 @@ export async function GET(request: NextRequest) {
       serverName: row.server_name,
       status: row.status,
       currency: row.currency,
+      nickname: row.nickname || '-',
       leverage: row.leverage,
     }));
 

@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS platforms (
   status VARCHAR(50) NOT NULL DEFAULT 'Enabled',
   currency VARCHAR(10) NOT NULL DEFAULT 'USD',
   leverage VARCHAR(50),
+  nickname VARCHAR(255),
+  fix_rate VARCHAR(50),
   swap_free VARCHAR(10) NOT NULL DEFAULT 'Tidak',
   type VARCHAR(20) DEFAULT 'Live',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

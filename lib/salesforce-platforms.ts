@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import pool from "@/lib/db";
 import {
   getLatestValidSalesforceToken,
@@ -101,6 +100,12 @@ function normalizeStatus(status: string): string {
   return "Enabled";
 }
 
+function isPersistableStatus(status: string | null): boolean {
+  if (!status) return false;
+  const normalized = status.trim().toLowerCase();
+  return normalized === "enabled" || normalized === "read-only";
+}
+
 function normalizeSwapFree(swapFree: string): string {
   if (!swapFree) return "Tidak";
   const normalized = swapFree.trim().toLowerCase();
@@ -113,6 +118,18 @@ function normalizeSwapFree(swapFree: string): string {
     return "Ya";
   }
   return "Tidak";
+}
+
+function inferTypeFromClientGroupName(clientGroupName: string | null): string | null {
+  if (!clientGroupName) return null;
+  const normalized = clientGroupName.trim().toLowerCase();
+  if (normalized.startsWith("real\\") || normalized.includes("\\real\\")) {
+    return "Live";
+  }
+  if (normalized.startsWith("demo\\") || normalized.includes("\\demo\\")) {
+    return "Demo";
+  }
+  return null;
 }
 
 function isPlatformish(obj: unknown): obj is Record<string, unknown> {
@@ -204,23 +221,26 @@ function extractPlatformRowsFromFlow(data: unknown): Record<string, unknown>[] {
   return [];
 }
 
-function syntheticRegistrationId(userId: number, login: string, server: string): string {
-  const h = crypto
-    .createHash("sha256")
-    .update(`${userId}\0${login}\0${server}`)
-    .digest("hex")
-    .slice(0, 24);
-  return `SF:${userId}:${h}`.slice(0, 100);
-}
-
 /**
  * Calls Salesforce Get Platforms flow and upserts rows into `platforms` for this user.
  */
 export async function fetchAndPersistPlatformsForUser(
   userId: number,
-  accountOrLeadId: string,
-  userAccountId: string | null
+  accountOrLeadId: string
 ): Promise<void> {
+  const userResult = await pool.query(
+    "SELECT account_id FROM users WHERE id = $1 LIMIT 1",
+    [userId]
+  );
+  const userAccountId =
+    userResult.rows[0]?.account_id &&
+    String(userResult.rows[0].account_id).trim()
+      ? String(userResult.rows[0].account_id).trim()
+      : null;
+  if (!userAccountId) {
+    throw new Error("Account ID user tidak ditemukan di table users");
+  }
+
   const token = await getValidAccessToken();
   let response = await postGetPlatformsFlow(token, accountOrLeadId);
 
@@ -250,21 +270,13 @@ export async function fetchAndPersistPlatformsForUser(
     return;
   }
 
-  const firstRow = rows[0];
-  const defaultAccountId =
-    userAccountId?.trim() ||
-    (firstRow
-      ? pickRowString(firstRow, ["accountId", "account_id", "AccountId"])
-      : null) ||
-    accountOrLeadId;
-
   for (const row of rows) {
     const login = pickRowString(row, [
+      "LoginNumber__c",
       "loginNumber",
       "login_number",
       "LoginNumber",
       "Login Number",
-      "LoginNumber__c",
     ]);
     const serverName = pickRowString(row, [
       "serverName",
@@ -277,26 +289,12 @@ export async function fetchAndPersistPlatformsForUser(
       continue;
     }
 
-    const platformRegistrationId =
-      pickRowString(row, [
-        "platformRegistrationId",
-        "platform_registration_id",
-        "Platform_Registration_ID",
-        "Platform Registration ID",
-        "Id",
-        "id",
-        "Long_ID__c",
-      ]) || syntheticRegistrationId(userId, login, serverName);
+    const platformRegistrationId = pickRowString(row, ["Id", "id"]);
+    if (!platformRegistrationId) {
+      continue;
+    }
 
-    const accountId =
-      pickRowString(row, [
-        "accountId",
-        "account_id",
-        "AccountId",
-        "Account: Account ID",
-        "Account__c",
-        "Lead__c",
-      ]) || defaultAccountId;
+    const accountId = userAccountId;
 
     const accountType =
       pickRowString(row, [
@@ -312,19 +310,26 @@ export async function fetchAndPersistPlatformsForUser(
         "Client Group Name",
         "ClientGroupName__c",
       ]) || null;
-    const status = normalizeStatus(
-      pickRowString(row, ["status", "Status", "Status__c"]) || "Enabled"
-    );
+    const rawStatus = pickRowString(row, ["Status__c", "status", "Status"]) || null;
+    if (rawStatus === null || !isPersistableStatus(rawStatus)) {
+      continue;
+    }
+    const status = normalizeStatus(rawStatus);
     const currency =
       pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
     const leverage =
       pickRowString(row, ["leverage", "Leverage", "Leverage__c"]) || null;
+    const nickname =
+      pickRowString(row, ["nickname", "Nickname", "Nickname__c"]) || null;
+    const fixRate =
+      pickRowString(row, ["fixRate", "FixRate", "Fix_Rate__c"]) || null;
     const swapFree = normalizeSwapFree(
       pickRowString(row, ["swapFree", "swap_free", "Swap Free", "SwapFree__c"]) ||
         "Tidak"
     );
     const type =
       pickRowString(row, ["type", "Type", "accountCategory", "Type__c"]) ||
+      inferTypeFromClientGroupName(clientGroupName) ||
       (pickRowBoolean(row, ["IsLive__c"]) ? "Live" : null) ||
       (pickRowBoolean(row, ["IsDemo__c"]) ? "Demo" : null) ||
       "Live";
@@ -332,8 +337,9 @@ export async function fetchAndPersistPlatformsForUser(
     await pool.query(
       `INSERT INTO platforms (
         platform_registration_id, user_id, account_id, login_number, server_name,
-        account_type, client_group_name, status, currency, leverage, swap_free, type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        account_type, client_group_name, status, currency, leverage, nickname,
+        fix_rate, swap_free, type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       ON CONFLICT (platform_registration_id) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         account_id = EXCLUDED.account_id,
@@ -344,6 +350,8 @@ export async function fetchAndPersistPlatformsForUser(
         status = EXCLUDED.status,
         currency = EXCLUDED.currency,
         leverage = EXCLUDED.leverage,
+        nickname = EXCLUDED.nickname,
+        fix_rate = EXCLUDED.fix_rate,
         swap_free = EXCLUDED.swap_free,
         type = EXCLUDED.type,
         updated_at = CURRENT_TIMESTAMP`,
@@ -358,6 +366,8 @@ export async function fetchAndPersistPlatformsForUser(
         status,
         currency,
         leverage,
+        nickname,
+        fixRate,
         swapFree,
         type,
       ]
