@@ -45,9 +45,20 @@ function pickRowString(
   row: Record<string, unknown>,
   candidates: string[]
 ): string | null {
+  const isPlaceholder = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === "" ||
+      normalized === "-" ||
+      normalized === "n/a" ||
+      normalized === "na" ||
+      normalized === "null"
+    );
+  };
+
   for (const key of candidates) {
     const v = row[key];
-    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "string" && !isPlaceholder(v)) return v.trim();
   }
   const lowerEntries = Object.entries(row).map(([k, v]) => [
     k.toLowerCase(),
@@ -56,7 +67,7 @@ function pickRowString(
   const byLower = new Map(lowerEntries);
   for (const c of candidates) {
     const v = byLower.get(c.toLowerCase());
-    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "string" && !isPlaceholder(v)) return v.trim();
   }
   return null;
 }
