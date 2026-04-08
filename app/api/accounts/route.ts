@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         currency,
         nickname,
         leverage,
+        fix_rate,
         type
       FROM platforms 
       WHERE user_id = $1
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest) {
               currency,
               nickname,
               leverage,
+              fix_rate,
               type
             FROM platforms 
             WHERE user_id = $1
@@ -105,6 +107,7 @@ export async function GET(request: NextRequest) {
       currency: row.currency,
       nickname: row.nickname ?? null,
       leverage: row.leverage,
+      fixRate: row.fix_rate,
     }));
 
     return NextResponse.json(
