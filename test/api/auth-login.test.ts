@@ -111,6 +111,6 @@ describe("POST /api/auth/login", () => {
     expect(json.token).toBe("mock.jwt.token");
     expect(json.user.email).toBe("ok@test.com");
     expect(json.user.id).toBe(42);
-    expect(generateToken).toHaveBeenCalledWith(42, "ok@test.com");
+    expect(generateToken).toHaveBeenCalledWith(42, "ok@test.com", null, null);
   });
 });

@@ -4,6 +4,13 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
 
+export type JwtPayload = {
+  userId: number;
+  email: string;
+  accountId?: string | null;
+  leadId?: string | null;
+};
+
 // Hash password
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 10;
@@ -16,18 +23,23 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 // Generate JWT token
-export function generateToken(userId: number, email: string): string {
+export function generateToken(
+  userId: number,
+  email: string,
+  accountId?: string | null,
+  leadId?: string | null
+): string {
   return jwt.sign(
-    { userId, email },
+    { userId, email, accountId: accountId ?? null, leadId: leadId ?? null },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
 }
 
 // Verify JWT token
-export function verifyToken(token: string): { userId: number; email: string } | null {
+export function verifyToken(token: string): JwtPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return decoded;
   } catch (error) {
     return null;

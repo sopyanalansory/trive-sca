@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { apiLogger, logRouteError } from '@/lib/logger';
+import { fetchAndPersistPlatformsForUser } from '@/lib/salesforce-platforms';
 
 const log = apiLogger('accounts');
 
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get platform accounts for the user
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT 
         id,
         account_type,
@@ -44,6 +45,56 @@ export async function GET(request: NextRequest) {
       ORDER BY created_at DESC`,
       [decoded.userId]
     );
+
+    if (result.rows.length === 0) {
+      const accountOrLeadId =
+        (decoded.accountId && String(decoded.accountId).trim()) ||
+        (decoded.leadId && String(decoded.leadId).trim()) ||
+        null;
+
+      if (accountOrLeadId) {
+        try {
+          const userAccountId = decoded.accountId
+            ? String(decoded.accountId).trim()
+            : null;
+          await fetchAndPersistPlatformsForUser(
+            decoded.userId,
+            accountOrLeadId,
+            userAccountId
+          );
+          result = await pool.query(
+            `SELECT 
+              id,
+              account_type,
+              client_group_name,
+              login_number,
+              server_name,
+              status,
+              currency,
+              leverage,
+              type
+            FROM platforms 
+            WHERE user_id = $1
+            ORDER BY created_at DESC`,
+            [decoded.userId]
+          );
+        } catch (error: unknown) {
+          logRouteError(
+            log,
+            request,
+            error,
+            'Sync platforms from Salesforce failed'
+          );
+          return NextResponse.json(
+            {
+              error:
+                'Gagal menyinkronkan akun platform dari Salesforce. Silakan coba lagi.',
+            },
+            { status: 502 }
+          );
+        }
+      }
+    }
 
     const accounts = result.rows.map((row) => ({
       id: row.id,

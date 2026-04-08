@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email
     const result = await pool.query(
-      'SELECT id, fullname, email, phone, country_code, password_hash FROM users WHERE email = $1',
+      'SELECT id, fullname, email, phone, country_code, password_hash, account_id, lead_id FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -115,7 +115,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate JWT token
-    const token = generateToken(user.id, user.email);
+    const token = generateToken(
+      user.id,
+      user.email,
+      user.account_id ?? null,
+      user.lead_id ?? null
+    );
 
     return NextResponse.json(
       {
