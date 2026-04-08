@@ -62,6 +62,36 @@ function pickRowString(
   return null;
 }
 
+function pickRowBoolean(
+  row: Record<string, unknown>,
+  candidates: string[]
+): boolean | null {
+  for (const key of candidates) {
+    const v = row[key];
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") {
+      const normalized = v.trim().toLowerCase();
+      if (normalized === "true") return true;
+      if (normalized === "false") return false;
+    }
+  }
+  const lowerEntries = Object.entries(row).map(([k, v]) => [
+    k.toLowerCase(),
+    v,
+  ]) as [string, unknown][];
+  const byLower = new Map(lowerEntries);
+  for (const c of candidates) {
+    const v = byLower.get(c.toLowerCase());
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") {
+      const normalized = v.trim().toLowerCase();
+      if (normalized === "true") return true;
+      if (normalized === "false") return false;
+    }
+  }
+  return null;
+}
+
 function normalizeStatus(status: string): string {
   if (!status) return "Enabled";
   const normalized = status.trim();
@@ -191,7 +221,7 @@ export async function fetchAndPersistPlatformsForUser(
   accountOrLeadId: string,
   userAccountId: string | null
 ): Promise<void> {
-  let token = await getValidAccessToken();
+  const token = await getValidAccessToken();
   let response = await postGetPlatformsFlow(token, accountOrLeadId);
 
   if (response.status === 401 || response.status === 403) {
@@ -234,11 +264,14 @@ export async function fetchAndPersistPlatformsForUser(
       "login_number",
       "LoginNumber",
       "Login Number",
+      "LoginNumber__c",
     ]);
     const serverName = pickRowString(row, [
       "serverName",
       "server_name",
       "Server Name",
+      "ServerName__c",
+      "ServerNameFormula__c",
     ]);
     if (!login || !serverName) {
       continue;
@@ -250,6 +283,9 @@ export async function fetchAndPersistPlatformsForUser(
         "platform_registration_id",
         "Platform_Registration_ID",
         "Platform Registration ID",
+        "Id",
+        "id",
+        "Long_ID__c",
       ]) || syntheticRegistrationId(userId, login, serverName);
 
     const accountId =
@@ -258,6 +294,8 @@ export async function fetchAndPersistPlatformsForUser(
         "account_id",
         "AccountId",
         "Account: Account ID",
+        "Account__c",
+        "Lead__c",
       ]) || defaultAccountId;
 
     const accountType =
@@ -265,25 +303,31 @@ export async function fetchAndPersistPlatformsForUser(
         "accountType",
         "account_type",
         "Account Type",
+        "AccountType__c",
       ]) || null;
     const clientGroupName =
       pickRowString(row, [
         "clientGroupName",
         "client_group_name",
         "Client Group Name",
+        "ClientGroupName__c",
       ]) || null;
     const status = normalizeStatus(
-      pickRowString(row, ["status", "Status"]) || "Enabled"
+      pickRowString(row, ["status", "Status", "Status__c"]) || "Enabled"
     );
     const currency =
-      pickRowString(row, ["currency", "Currency"]) || "USD";
+      pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
     const leverage =
-      pickRowString(row, ["leverage", "Leverage"]) || null;
+      pickRowString(row, ["leverage", "Leverage", "Leverage__c"]) || null;
     const swapFree = normalizeSwapFree(
-      pickRowString(row, ["swapFree", "swap_free", "Swap Free"]) || "Tidak"
+      pickRowString(row, ["swapFree", "swap_free", "Swap Free", "SwapFree__c"]) ||
+        "Tidak"
     );
     const type =
-      pickRowString(row, ["type", "Type", "accountCategory"]) || "Live";
+      pickRowString(row, ["type", "Type", "accountCategory", "Type__c"]) ||
+      (pickRowBoolean(row, ["IsLive__c"]) ? "Live" : null) ||
+      (pickRowBoolean(row, ["IsDemo__c"]) ? "Demo" : null) ||
+      "Live";
 
     await pool.query(
       `INSERT INTO platforms (
