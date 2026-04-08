@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('market-updates:[id]');
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -77,8 +80,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: result.rows[0],
     });
-  } catch (error: any) {
-    console.error('Error fetching market update:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Get market update by id failed');
     return NextResponse.json(
       { success: false, error: 'Terjadi kesalahan saat mengambil data.' },
       { status: 500 }
@@ -265,8 +268,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       message: 'Market update berhasil diupdate',
       data: result.rows[0],
     });
-  } catch (error: any) {
-    console.error('Error updating market update:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Update market update failed');
     return NextResponse.json(
       { success: false, error: 'Terjadi kesalahan saat mengupdate data.' },
       { status: 500 }
@@ -316,8 +319,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       success: true,
       message: `Market update "${existingResult.rows[0].title}" berhasil dihapus`,
     });
-  } catch (error: any) {
-    console.error('Error deleting market update:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Delete market update failed');
     return NextResponse.json(
       { success: false, error: 'Terjadi kesalahan saat menghapus data.' },
       { status: 500 }

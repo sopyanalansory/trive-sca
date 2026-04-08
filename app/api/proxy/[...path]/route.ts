@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 // Target API (server-side only). Example: https://api.domain.com
 const targetBase = (process.env.API_PROXY_TARGET || '').replace(/\/+$/, '');
 
 if (!targetBase) {
-  console.warn('API proxy is enabled but API_PROXY_TARGET is not set.');
+  logger.warn('API proxy route loaded but API_PROXY_TARGET is not set');
 }
 
 // Configure max body size for proxy (10MB)

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('market-updates');
 
 // Basic Auth credentials (should be in environment variables for production)
 const BASIC_AUTH_USERNAME = process.env.MARKET_UPDATES_USERNAME || 'admin';
@@ -149,8 +152,8 @@ export async function GET(request: NextRequest) {
         hasPrevPage: page > 1,
       },
     });
-  } catch (error: any) {
-    console.error('Error fetching market updates:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'List market updates failed');
     return NextResponse.json(
       { 
         success: false, 
@@ -261,8 +264,8 @@ export async function POST(request: NextRequest) {
         status: 201,
       }
     );
-  } catch (error: any) {
-    console.error('Error creating market update:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Create market update failed');
     return NextResponse.json(
       { 
         success: false, 

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { sendDepositNotificationEmail } from '@/lib/email';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('deposit');
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,9 +103,8 @@ export async function POST(request: NextRequest) {
       description: description || undefined,
       requestId: depositRequest.id,
       createdAt: depositRequest.created_at,
-    }).catch((error) => {
-      console.error('Failed to send deposit notification email:', error);
-      // Don't fail the request if email fails
+    }).catch((error: unknown) => {
+      logRouteError(log, request, error, 'Deposit notification email failed');
     });
 
     return NextResponse.json(
@@ -122,8 +124,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('Create deposit request error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Create deposit request failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat membuat deposit request. Silakan coba lagi.' },
       { status: 500 }

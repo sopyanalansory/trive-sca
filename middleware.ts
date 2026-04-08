@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, NextFetchEvent } from "next/server"
 import { getCorsHeaders } from "@/lib/cors"
+import { enforceApiIpLimit } from "@/lib/rate-limit"
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
     const origin = request.headers.get("origin")
 
     if (request.method === "OPTIONS") {
@@ -9,6 +10,14 @@ export function middleware(request: NextRequest) {
             status: 204,
             headers: getCorsHeaders(origin),
         })
+    }
+
+    const { response: ipLimited, pending } = await enforceApiIpLimit(request)
+    if (pending) {
+        event.waitUntil(pending)
+    }
+    if (ipLimited) {
+        return ipLimited
     }
 
     const response = NextResponse.next()

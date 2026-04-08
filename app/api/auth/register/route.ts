@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
 import { isValidLocalPhoneLength, normalizePhoneForDb, toMsisdn } from '@/lib/phone';
+import { enforceOtpVerifyByMsisdn } from '@/lib/rate-limit';
+import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
+
+const log = apiLogger('auth:register');
 
 const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5quLhTcsmnOC';
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
@@ -62,6 +66,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const verifyLimited = await enforceOtpVerifyByMsisdn(request, fullPhoneNumber);
+    if (verifyLimited) {
+      return verifyLimited;
+    }
+
     // Verify OTP via Verihubs
     try {
       const verifyPayload = {
@@ -69,13 +78,15 @@ export async function POST(request: NextRequest) {
         otp: String(verificationCode).trim(), // Ensure OTP is string and trimmed
       };
       
-      console.log('Verihubs verify request:', {
-        url: `${VERIHUBS_API_URL}/verify`,
-        payload: verifyPayload,
-        originalPhone: phone,
-        normalizedPhone: normalizedPhone,
-        countryCode: countryCode || '+62',
-      });
+      log.debug(
+        {
+          ...requestLogFields(request),
+          url: `${VERIHUBS_API_URL}/verify`,
+          msisdn: fullPhoneNumber,
+          countryCode: countryCode || '+62',
+        },
+        'Verihubs verify request (OTP not logged)'
+      );
 
       const verihubsResponse = await fetch(`${VERIHUBS_API_URL}/verify`, {
         method: 'POST',
@@ -94,22 +105,31 @@ export async function POST(request: NextRequest) {
       
       try {
         verihubsData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Verihubs response is not valid JSON:', responseText);
-        console.error('Response status:', verihubsResponse.status);
+      } catch {
+        log.error(
+          {
+            ...requestLogFields(request),
+            status: verihubsResponse.status,
+            bodyPreview: responseText.slice(0, 500),
+          },
+          'Verihubs verify response is not valid JSON'
+        );
         return NextResponse.json(
           { error: 'Kode verifikasi tidak valid atau sudah kadaluarsa' },
           { status: 400 }
         );
       }
 
-      // Log full response for debugging
-      console.log('Verihubs verify response:', {
-        status: verihubsResponse.status,
-        ok: verihubsResponse.ok,
-        data: verihubsData,
-        phone: fullPhoneNumber,
-      });
+      log.debug(
+        {
+          ...requestLogFields(request),
+          status: verihubsResponse.status,
+          ok: verihubsResponse.ok,
+          msisdn: fullPhoneNumber,
+          verihubsBody: verihubsData,
+        },
+        'Verihubs verify response'
+      );
 
       // Check if verification was successful
       // Verihubs might return different success indicators
@@ -121,11 +141,15 @@ export async function POST(request: NextRequest) {
       );
 
       if (!isVerified) {
-        console.error('Verihubs verify error:', {
-          status: verihubsResponse.status,
-          data: verihubsData,
-          phone: fullPhoneNumber,
-        });
+        log.warn(
+          {
+            ...requestLogFields(request),
+            status: verihubsResponse.status,
+            msisdn: fullPhoneNumber,
+            verihubsBody: verihubsData,
+          },
+          'Verihubs verify rejected'
+        );
         return NextResponse.json(
           { error: verihubsData.message || 'Kode verifikasi tidak valid atau sudah kadaluarsa' },
           { status: 400 }
@@ -187,26 +211,33 @@ export async function POST(request: NextRequest) {
         },
         { status: 201 }
       );
-    } catch (verihubsError: any) {
-      console.error('Verihubs API error:', {
-        message: verihubsError.message,
-        stack: verihubsError.stack,
-        name: verihubsError.name,
-        phone: fullPhoneNumber,
-        code: verificationCode,
-      });
-      
+    } catch (verihubsError: unknown) {
+      logRouteError(log, request, verihubsError, 'Verihubs verify request failed during register');
+
       return NextResponse.json(
-        { error: verihubsError.message || 'Gagal memverifikasi kode verifikasi. Silakan coba lagi.' },
+        {
+          error:
+            verihubsError instanceof Error
+              ? verihubsError.message
+              : 'Gagal memverifikasi kode verifikasi. Silakan coba lagi.',
+        },
         { status: 500 }
       );
     }
-  } catch (error: any) {
-    console.error('Registration error:', error);
-    
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Registration failed');
+
     // Handle unique constraint violations
-    if (error.code === '23505') {
-      if (error.constraint === 'users_email_key') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code: string }).code === '23505'
+    ) {
+      if (
+        'constraint' in error &&
+        (error as { constraint: string }).constraint === 'users_email_key'
+      ) {
         return NextResponse.json(
           { error: 'Email sudah terdaftar' },
           { status: 409 }

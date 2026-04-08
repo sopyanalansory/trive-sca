@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { sendWithdrawalNotificationEmail } from '@/lib/email';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('withdrawal');
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,9 +103,8 @@ export async function POST(request: NextRequest) {
       description: description || undefined,
       requestId: withdrawalRequest.id,
       createdAt: withdrawalRequest.created_at,
-    }).catch((error) => {
-      console.error('Failed to send withdrawal notification email:', error);
-      // Don't fail the request if email fails
+    }).catch((error: unknown) => {
+      logRouteError(log, request, error, 'Withdrawal notification email failed');
     });
 
     return NextResponse.json(
@@ -122,8 +124,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('Create withdrawal request error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Create withdrawal request failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat membuat withdrawal request. Silakan coba lagi.' },
       { status: 500 }

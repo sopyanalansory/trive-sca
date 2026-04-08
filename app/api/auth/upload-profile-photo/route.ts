@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('auth:upload-profile-photo');
 
 // Configure max body size for this route (10MB)
 export const maxDuration = 30;
@@ -74,8 +77,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Upload profile photo error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Upload profile photo failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat mengupload foto profil. Silakan coba lagi.' },
       { status: 500 }

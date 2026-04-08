@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyPassword, generateToken } from '@/lib/auth';
 import { getLatestValidSalesforceToken } from '@/lib/salesforce-oauth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('auth:login');
 
 async function hasSalesforceClientByEmail(email: string): Promise<boolean> {
   const token = await getLatestValidSalesforceToken();
@@ -129,8 +132,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Login error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Login failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat login. Silakan coba lagi.' },
       { status: 500 }

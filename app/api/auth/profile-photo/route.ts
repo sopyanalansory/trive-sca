@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
+
+const log = apiLogger('auth:profile-photo');
 
 // Configure max body size for this route (10MB)
 export const maxDuration = 30;
@@ -12,16 +15,18 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '') || null;
 
-    // Debug logging
-    console.log('[Profile Photo API] Request received:', {
-      hasAuthHeader: !!authHeader,
-      authHeaderPreview: authHeader ? authHeader.substring(0, 30) + '...' : null,
-      hasToken: !!token,
-      tokenLength: token?.length || 0,
-    });
+    log.debug(
+      {
+        ...requestLogFields(request),
+        hasAuthHeader: !!authHeader,
+        hasToken: !!token,
+        tokenLength: token?.length ?? 0,
+      },
+      'Profile photo GET'
+    );
 
     if (!token) {
-      console.error('[Profile Photo API] No token found');
+      log.warn(requestLogFields(request), 'Profile photo GET without token');
       return NextResponse.json(
         { error: 'Token tidak ditemukan' },
         { status: 401 }
@@ -31,14 +36,17 @@ export async function GET(request: NextRequest) {
     // Verify token
     const decoded = verifyToken(token);
     if (!decoded) {
-      console.error('[Profile Photo API] Token verification failed');
+      log.warn(requestLogFields(request), 'Profile photo GET token invalid');
       return NextResponse.json(
         { error: 'Token tidak valid atau sudah kadaluarsa' },
         { status: 401 }
       );
     }
 
-    console.log('[Profile Photo API] Token verified for user:', decoded.userId);
+    log.debug(
+      { ...requestLogFields(request), userId: decoded.userId },
+      'Profile photo GET authorized'
+    );
 
     // Get user photo from database
     const result = await pool.query(
@@ -74,13 +82,13 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'private, max-age=3600',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Profile photo GET failed');
     const detail =
-      (error && typeof error === 'object' && (error.message || error.cause?.message)) ||
-      (error?.stack && String(error.stack).split('\n')[0]) ||
+      (error && typeof error === 'object' && 'message' in error && String((error as Error).message)) ||
+      (error instanceof Error && error.stack && String(error.stack).split('\n')[0]) ||
       (typeof error === 'object' ? JSON.stringify(error) : String(error)) ||
       'Unknown error';
-    console.error('[Profile Photo API] Error:', detail, error);
     return NextResponse.json(
       {
         error: 'Terjadi kesalahan saat mengambil foto profil.',

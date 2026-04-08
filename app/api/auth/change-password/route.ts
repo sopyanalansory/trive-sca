@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken, hashPassword, verifyPassword } from '@/lib/auth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('auth:change-password');
 
 export async function PUT(request: NextRequest) {
   try {
@@ -92,8 +95,8 @@ export async function PUT(request: NextRequest) {
       { message: 'Password berhasil diubah' },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Change password error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Change password failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat mengubah password. Silakan coba lagi.' },
       { status: 500 }

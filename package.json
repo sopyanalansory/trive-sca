@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "init-db": "tsx lib/db-init.ts",
     "generate-jwt-secret": "node scripts/generate-jwt-secret.js",
     "test-prod-db": "node scripts/test-production-db.js",
@@ -26,12 +28,15 @@
     "generate-favicon": "node scripts/generate-favicon.js"
   },
   "dependencies": {
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.3",
     "next": "16.1.0",
     "nodemailer": "^6.9.8",
     "pg": "^8.16.3",
+    "pino": "^10.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -50,6 +55,7 @@
     "tailwindcss": "^4",
     "to-ico": "^1.1.5",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

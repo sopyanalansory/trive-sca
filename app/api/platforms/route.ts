@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('platforms');
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,8 +63,8 @@ export async function GET(request: NextRequest) {
       { platforms },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Get platforms error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Get platforms failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat mengambil data platform. Silakan coba lagi.' },
       { status: 500 }

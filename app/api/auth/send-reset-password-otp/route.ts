@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../../lib/db';
 import { isValidLocalPhoneLength, normalizePhoneForDb, toMsisdn } from '../../../../lib/phone';
+import { enforceOtpSendByEmail } from '../../../../lib/rate-limit';
+import { apiLogger, logRouteError, requestLogFields } from '../../../../lib/logger';
+
+const log = apiLogger('auth:send-reset-password-otp');
 
 const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5quLhTcsmnOC';
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
@@ -29,6 +33,11 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
+    const emailLimited = await enforceOtpSendByEmail(request, normalizedEmail);
+    if (emailLimited) {
+      return emailLimited;
+    }
+
     // Check if user exists and get phone number from database
     const userCheck = await pool.query(
       'SELECT id, email, phone, country_code FROM users WHERE email = $1',
@@ -53,7 +62,14 @@ export async function POST(request: NextRequest) {
 
     // Validate normalized phone length
     if (!isValidLocalPhoneLength(normalizedPhone)) {
-      console.error(`Invalid phone length after normalization: ${normalizedPhone.length} for phone: ${phoneFromDb}`);
+      log.warn(
+        {
+          ...requestLogFields(request),
+          phoneDigitsLen: normalizedPhone.length,
+          email: normalizedEmail,
+        },
+        'User phone from DB failed length validation for Verihubs'
+      );
       return NextResponse.json(
         { error: 'Nomor telepon tidak valid. Silakan hubungi customer service.' },
         { status: 400 }
@@ -82,7 +98,10 @@ export async function POST(request: NextRequest) {
       const verihubsData = await verihubsResponse.json();
 
       if (!verihubsResponse.ok) {
-        console.error('Verihubs error:', verihubsData);
+        log.warn(
+          { ...requestLogFields(request), email: normalizedEmail, verihubsBody: verihubsData },
+          'Verihubs reset OTP send rejected'
+        );
         return NextResponse.json(
           { error: 'Gagal mengirim kode OTP. Silakan coba lagi.' },
           { status: 500 }
@@ -109,15 +128,15 @@ export async function POST(request: NextRequest) {
         },
         { status: 200 }
       );
-    } catch (verihubsError: any) {
-      console.error('Verihubs API error:', verihubsError);
+    } catch (verihubsError: unknown) {
+      logRouteError(log, request, verihubsError, 'Verihubs reset OTP send failed');
       return NextResponse.json(
         { error: 'Gagal mengirim kode OTP. Silakan coba lagi.' },
         { status: 500 }
       );
     }
-  } catch (error: any) {
-    console.error('Send reset password OTP error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Send reset password OTP failed');
     return NextResponse.json(
       { error: 'Gagal mengirim kode OTP. Silakan coba lagi.' },
       { status: 500 }

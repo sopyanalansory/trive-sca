@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshAndStoreSalesforceToken } from "@/lib/salesforce-oauth";
+import { apiLogger, logRouteError } from "@/lib/logger";
+
+const log = apiLogger("internal:salesforce-token-refresh");
 
 export const runtime = "nodejs";
 
@@ -32,12 +35,15 @@ async function runRefresh(request: NextRequest) {
       message: "Salesforce token refreshed and stored",
       data: result,
     });
-  } catch (error: any) {
-    console.error("Salesforce token refresh error:", error?.message || error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, "Salesforce token refresh failed");
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Failed to refresh Salesforce token",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to refresh Salesforce token",
       },
       { status: 500 }
     );

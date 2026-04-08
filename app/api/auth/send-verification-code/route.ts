@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { isValidLocalPhoneLength, normalizePhoneForDb, toMsisdn } from '@/lib/phone';
+import { enforceOtpSendByMsisdn } from '@/lib/rate-limit';
+import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
+
+const log = apiLogger('auth:send-verification-code');
 
 const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5quLhTcsmnOC';
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
@@ -29,6 +33,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const msisdnLimited = await enforceOtpSendByMsisdn(request, fullPhoneNumber);
+    if (msisdnLimited) {
+      return msisdnLimited;
+    }
+
     // Send OTP via Verihubs
     try {
       const verihubsResponse = await fetch(`${VERIHUBS_API_URL}/send`, {
@@ -51,7 +60,10 @@ export async function POST(request: NextRequest) {
       const verihubsData = await verihubsResponse.json();
 
       if (!verihubsResponse.ok) {
-        console.error('Verihubs error:', verihubsData);
+        log.warn(
+          { ...requestLogFields(request), verihubsBody: verihubsData },
+          'Verihubs send OTP rejected'
+        );
         return NextResponse.json(
           { error: 'Gagal mengirim kode verifikasi. Silakan coba lagi.' },
           { status: 500 }
@@ -75,7 +87,10 @@ export async function POST(request: NextRequest) {
                        process.env.HIDE_VERIFICATION_CODE === '1';
       
       if (!hideCode && verihubsData.otp) {
-        console.log(`[DEBUG] Returning verification code: ${verihubsData.otp}`);
+        log.debug(
+          { ...requestLogFields(request), msisdn: fullPhoneNumber },
+          'Returning OTP in response (HIDE_VERIFICATION_CODE off; value not logged)'
+        );
         return NextResponse.json(
           {
             message: 'Kode verifikasi telah dikirim',
@@ -85,21 +100,23 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Don't return code (production mode)
-      console.log(`[PROD] Not returning verification code (HIDE_VERIFICATION_CODE is enabled or Verihubs didn't return code)`);
+      log.debug(
+        { ...requestLogFields(request), msisdn: fullPhoneNumber, hideCode },
+        'Verification send success without exposing code in response'
+      );
       return NextResponse.json(
         { message: 'Kode verifikasi telah dikirim' },
         { status: 200 }
       );
-    } catch (verihubsError: any) {
-      console.error('Verihubs API error:', verihubsError);
+    } catch (verihubsError: unknown) {
+      logRouteError(log, request, verihubsError, 'Verihubs send OTP failed');
       return NextResponse.json(
         { error: 'Gagal mengirim kode verifikasi. Silakan coba lagi.' },
         { status: 500 }
       );
     }
-  } catch (error: any) {
-    console.error('Send verification code error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Send verification code failed');
     return NextResponse.json(
       { error: 'Gagal mengirim kode verifikasi. Silakan coba lagi.' },
       { status: 500 }

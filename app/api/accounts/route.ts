@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('accounts');
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,8 +61,8 @@ export async function GET(request: NextRequest) {
       { accounts },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Get accounts error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Get accounts failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat mengambil data akun. Silakan coba lagi.' },
       { status: 500 }

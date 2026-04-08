@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { sendResetPasswordNotificationEmail } from '@/lib/email';
+import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
+
+const log = apiLogger('accounts:reset-password');
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,7 +75,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!emailResult.success) {
-      console.error('Failed to send reset password email:', emailResult.error);
+      log.warn(
+        { ...requestLogFields(request), detail: emailResult.error },
+        'Platform reset password notification email failed'
+      );
       return NextResponse.json(
         { error: 'Gagal mengirim email notifikasi. Silakan coba lagi.' },
         { status: 500 }
@@ -86,8 +92,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Reset password request error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Platform reset password request failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat memproses request reset password. Silakan coba lagi.' },
       { status: 500 }

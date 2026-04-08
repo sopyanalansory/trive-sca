@@ -7,6 +7,9 @@ import {
   requestSalesforceAccessToken,
   saveSalesforceAccessToken,
 } from "../../../../lib/salesforce-oauth";
+import { apiLogger, logRouteError } from "../../../../lib/logger";
+
+const log = apiLogger("auth:check-salesforce-client");
 
 const SALESFORCE_SEARCH_CLIENT_FLOW_URL =
   process.env.SALESFORCE_SEARCH_CLIENT_FLOW_URL ||
@@ -383,7 +386,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error: unknown) {
-    console.error("Check Salesforce client error:", error);
+    logRouteError(log, request, error, "Check Salesforce client failed");
     return NextResponse.json(
       { error: "Terjadi kesalahan saat memeriksa data client." },
       { status: 500 }

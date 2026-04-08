@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('investment-account:upload-documents');
 
 export const maxDuration = 30;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB per file
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    console.error('Upload investment documents error:', error);
+    logRouteError(log, request, error, 'Upload investment documents failed');
     return NextResponse.json(
       { error: 'Gagal mengupload dokumen. Silakan coba lagi.' },
       { status: 500 }

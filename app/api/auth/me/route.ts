@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('auth:me');
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,11 +68,12 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Get user error:', error);
-    const message = process.env.NODE_ENV === 'development' && error?.message
-      ? error.message
-      : 'Terjadi kesalahan saat mengambil data user. Silakan coba lagi.';
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Get user failed');
+    const message =
+      process.env.NODE_ENV === 'development' && error instanceof Error
+        ? error.message
+        : 'Terjadi kesalahan saat mengambil data user. Silakan coba lagi.';
     return NextResponse.json(
       { error: message },
       { status: 500 }
@@ -257,8 +261,8 @@ export async function PUT(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Update user error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Update user failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat mengupdate profil. Silakan coba lagi.' },
       { status: 500 }

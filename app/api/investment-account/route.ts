@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { apiLogger, logRouteError } from '@/lib/logger';
+
+const log = apiLogger('investment-account');
 
 // Mapping step ke kolom DB (sesuai urutan halaman open-investment-account)
 const STEP_COLUMN: Record<number, string> = {
@@ -66,8 +69,8 @@ export async function GET(request: NextRequest) {
         updatedAt: row.updated_at,
       },
     });
-  } catch (error: any) {
-    console.error('Get investment account error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Get investment account failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat mengambil data aplikasi.' },
       { status: 500 }
@@ -182,8 +185,8 @@ export async function POST(request: NextRequest) {
     const row = insertResult.rows[0];
     const newStatus = step >= 12 ? 'submitted' : 'in_progress';
     return NextResponse.json({ success: true, id: row.id, currentStep: step, status: newStatus });
-  } catch (error: any) {
-    console.error('Save investment account error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Save investment account failed');
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat menyimpan data.' },
       { status: 500 }

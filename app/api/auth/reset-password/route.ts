@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../../lib/db';
 import { hashPassword } from '../../../../lib/auth';
 import { normalizePhoneForDb, toMsisdn } from '../../../../lib/phone';
+import { enforceOtpVerifyByEmail } from '../../../../lib/rate-limit';
+import { apiLogger, logRouteError, requestLogFields } from '../../../../lib/logger';
+
+const log = apiLogger('auth:reset-password');
 
 const VERIHUBS_API_KEY = process.env.VERIHUBS_API_KEY || 'B0KRgWAJRO9xLVGRYlGA5quLhTcsmnOC';
 const VERIHUBS_APP_ID = process.env.VERIHUBS_APP_ID || '4bd67e6d-deaf-467c-bafe-1ffe915c3518';
@@ -70,6 +74,11 @@ export async function POST(request: NextRequest) {
     const normalizedPhone = normalizePhoneForDb(phoneFromDb);
     const msisdn = toMsisdn(normalizedPhone, countryCodeFromDb);
 
+    const verifyLimited = await enforceOtpVerifyByEmail(request, normalizedEmail);
+    if (verifyLimited) {
+      return verifyLimited;
+    }
+
     // Verify OTP via Verihubs
     try {
       const verihubsResponse = await fetch(`${VERIHUBS_API_URL}/verify`, {
@@ -89,7 +98,10 @@ export async function POST(request: NextRequest) {
       const verihubsData = await verihubsResponse.json();
 
       if (!verihubsResponse.ok || !verihubsData.message || !verihubsData.message.includes('verified')) {
-        console.error('Verihubs verify error:', verihubsData);
+        log.warn(
+          { ...requestLogFields(request), email: normalizedEmail, verihubsBody: verihubsData },
+          'Verihubs reset password OTP verify failed'
+        );
         return NextResponse.json(
           { error: 'Kode OTP tidak valid atau sudah kadaluarsa' },
           { status: 400 }
@@ -123,15 +135,15 @@ export async function POST(request: NextRequest) {
         { message: 'Password berhasil direset. Silakan login dengan password baru.' },
         { status: 200 }
       );
-    } catch (verihubsError: any) {
-      console.error('Verihubs API error:', verihubsError);
+    } catch (verihubsError: unknown) {
+      logRouteError(log, request, verihubsError, 'Verihubs reset password verify request failed');
       return NextResponse.json(
         { error: 'Gagal memverifikasi OTP. Silakan coba lagi.' },
         { status: 500 }
       );
     }
-  } catch (error: any) {
-    console.error('Reset password error:', error);
+  } catch (error: unknown) {
+    logRouteError(log, request, error, 'Reset password failed');
     return NextResponse.json(
       { error: 'Gagal reset password. Silakan coba lagi.' },
       { status: 500 }
