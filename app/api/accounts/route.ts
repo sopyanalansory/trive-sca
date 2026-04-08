@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       serverName: row.server_name,
       status: row.status,
       currency: row.currency,
-      nickname: row.nickname || '-',
+      nickname: row.nickname ?? null,
       leverage: row.leverage,
     }));
 
