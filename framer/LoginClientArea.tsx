@@ -15,6 +15,9 @@ interface LoginSuccessResponse {
     email?: string
 }
 
+const LOGIN_ERROR_FALLBACK_NO_MESSAGE =
+    "Akun ini tidak terdaftar. Silahkan lanjutkan pembuatan akun"
+
 type LoginClientAreaProps = {
     loginApiUrl?: string
     accentColor?: string
@@ -25,6 +28,7 @@ type LoginClientAreaProps = {
     registerUrl?: string
     forgotPasswordUrl?: string
     accountsUrl?: string
+    whatsappUrl?: string
     redirectIfAlreadyLoggedIn?: boolean
     fullViewport?: boolean
 }
@@ -40,6 +44,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
         registerUrl = `${BASE}/register`,
         forgotPasswordUrl = `${BASE}/forgot-password`,
         accountsUrl = `${BASE}/accounts`,
+        whatsappUrl = "https://wa.me/628815921000",
         redirectIfAlreadyLoggedIn = true,
         fullViewport = false,
     } = props
@@ -178,11 +183,18 @@ function LoginClientArea(props: LoginClientAreaProps) {
             const data: LoginSuccessResponse = await response.json()
 
             if (!response.ok) {
+                const wrongPasswordMessage =
+                    "Demi keamanan akun Anda, silakan lakukan reset kata sandi untuk melanjutkan."
+                const isWrongPassword =
+                    data.errorType === "wrong_password" && data.email
+                const serverError = (data.error ?? "").trim()
+
                 setLoginError(
-                    data.error ||
-                        "Terjadi kesalahan saat login. Silakan coba lagi."
+                    isWrongPassword
+                        ? wrongPasswordMessage
+                        : serverError || LOGIN_ERROR_FALLBACK_NO_MESSAGE
                 )
-                if (data.errorType === "wrong_password" && data.email) {
+                if (isWrongPassword) {
                     setShowResetPasswordOption(true)
                 } else {
                     setShowResetPasswordOption(false)
@@ -283,6 +295,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                     .login-submit-btn { min-height: 48px !important; min-width: 100% !important; }
                     .login-mobile-forgot { display: inline !important; }
                     .login-bubbles-wrap { width: 90px !important; height: 80px !important; }
+                    .login-wa-btn { bottom: 20px !important; right: 20px !important; padding: 14px !important; }
                 }
                 @media (max-width: 767px) {
                     .login-left-col { padding: 28px 16px 18px !important; }
@@ -293,6 +306,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                     .login-form-title { font-size: 1.55rem !important; margin-bottom: 16px !important; }
                     .login-card input { height: 48px !important; padding-left: 18px !important; padding-right: 18px !important; }
                     .login-submit-btn { font-size: 14px !important; padding: 14px 20px 12px !important; }
+                    .login-wa-btn { bottom: 14px !important; right: 14px !important; padding: 12px !important; }
                 }
                 @media (min-width: 1024px) {
                     .login-mobile-forgot { display: none !important; }
@@ -300,6 +314,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                 .login-form-footer-wrap { margin-top: 16px; }
                 @media (min-width: 640px) {
                     .login-form-footer-wrap { margin-top: 24px; }
+                    .login-wa-chat-label { display: inline-block !important; }
                 }
                 .login-submit-btn:not(:disabled) {
                     transition: transform 0.12s ease, background-color 0.12s ease;
@@ -311,6 +326,53 @@ function LoginClientArea(props: LoginClientAreaProps) {
                     transform: scale(0.98);
                 }
             `}</style>
+
+            {whatsappUrl ? (
+                <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chat dengan WhatsApp"
+                    className="login-wa-btn"
+                    style={{
+                        position: "fixed",
+                        bottom: 24,
+                        right: 24,
+                        zIndex: 50,
+                        backgroundColor: "#25D366",
+                        color: "#ffffff",
+                        borderRadius: 9999,
+                        padding: "16px",
+                        boxShadow:
+                            "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.15)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textDecoration: "none",
+                    }}
+                >
+                    <svg
+                        width={24}
+                        height={24}
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982a.524.524 0 01-.656-.68l.985-3.74-.214-.361a9.87 9.87 0 01-1.378-5.03c0-5.45 4.436-9.884 9.884-9.884 2.64 0 5.123 1.03 6.979 2.898a9.825 9.825 0 012.897 6.98c0 5.45-4.436 9.884-9.884 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.16 11.892c0 2.096.547 4.142 1.588 5.945L.05 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.89-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                    </svg>
+                    <span
+                        style={{
+                            marginLeft: 8,
+                            fontSize: 14,
+                            fontWeight: 500,
+                            display: "none",
+                        }}
+                        className="login-wa-chat-label"
+                    >
+                        Chat
+                    </span>
+                </a>
+            ) : null}
 
             <div
                 style={{
@@ -747,8 +809,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                                         }
                                                         style={linkStyle}
                                                     >
-                                                        Reset password dengan
-                                                        OTP
+                                                        Reset password Anda
                                                     </a>
                                                 </div>
                                             )}
@@ -908,6 +969,7 @@ LoginClientArea.defaultProps = {
     registerUrl: `${BASE}/register`,
     forgotPasswordUrl: `${BASE}/forgot-password`,
     accountsUrl: `${BASE}/accounts`,
+    whatsappUrl: "https://wa.me/628815921000",
     redirectIfAlreadyLoggedIn: true,
     fullViewport: false,
 }
@@ -959,6 +1021,12 @@ addPropertyControls(LoginClientArea, {
         type: ControlType.String,
         title: "After login redirect",
         defaultValue: `${BASE}/accounts`,
+    },
+    whatsappUrl: {
+        type: ControlType.String,
+        title: "WhatsApp button URL (empty = hide)",
+        defaultValue: "https://wa.me/628815921000",
+        placeholder: "https://wa.me/…",
     },
     redirectIfAlreadyLoggedIn: {
         type: ControlType.Boolean,

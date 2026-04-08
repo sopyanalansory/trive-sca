@@ -6,6 +6,13 @@ import { AuthPageFooter } from "./AuthPageFooter.tsx"
 
 const BASE = "https://www.triveinvest.co.id/sca"
 const API_BASE = "https://api.trive.co.id/api"
+const OTP_RESEND_COOLDOWN_SEC = 120
+
+function formatOtpCooldown(seconds: number): string {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+}
 
 interface SendOtpResponse {
     error?: string
@@ -63,10 +70,13 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
     const [isSendingOtp, setIsSendingOtp] = React.useState(false)
     const [error, setError] = React.useState("")
     const [success, setSuccess] = React.useState("")
+    const [otpSentMessage, setOtpSentMessage] = React.useState("")
     const [emailError, setEmailError] = React.useState("")
     const [phoneError, setPhoneError] = React.useState("")
     const [passwordError, setPasswordError] = React.useState("")
     const [otpError, setOtpError] = React.useState("")
+    const [otpResendSecondsLeft, setOtpResendSecondsLeft] = React.useState(0)
+    const [isResendingOtp, setIsResendingOtp] = React.useState(false)
 
     React.useEffect(() => {
         if (globalThis.window === undefined) return
@@ -80,6 +90,34 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         const resolvedEmail = (emailFromQuery || emailFromStorage).trim()
         setEmail(resolvedEmail)
     }, [])
+
+    React.useEffect(() => {
+        if (!otpSentMessage || step !== "otp") return
+        const timeoutId = globalThis.setTimeout(() => {
+            setOtpSentMessage("")
+        }, 6000)
+        return () => {
+            globalThis.clearTimeout(timeoutId)
+        }
+    }, [otpSentMessage, step])
+
+    React.useEffect(() => {
+        if (step !== "otp") {
+            setOtpResendSecondsLeft(0)
+            return
+        }
+        setOtpResendSecondsLeft(OTP_RESEND_COOLDOWN_SEC)
+    }, [step])
+
+    const otpCooldownActive =
+        step === "otp" && otpResendSecondsLeft > 0
+    React.useEffect(() => {
+        if (!otpCooldownActive) return
+        const id = globalThis.setInterval(() => {
+            setOtpResendSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1))
+        }, 1000)
+        return () => globalThis.clearInterval(id)
+    }, [otpCooldownActive])
 
     const validateEmail = (emailValue: string): boolean => {
         if (!emailValue.trim()) {
@@ -155,6 +193,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         setIsSendingOtp(true)
         setError("")
         setSuccess("")
+        setOtpSentMessage("")
 
         try {
             const emailPayload = email.trim()
@@ -198,8 +237,8 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                 },
                 body: JSON.stringify({
                     email: emailPayload,
-                    phone: phonePayload,
-                    phoneNumber: phonePayload,
+                    // phone: phonePayload,
+                    // phoneNumber: phonePayload,
                 }),
             })
 
@@ -212,23 +251,66 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                 return
             }
 
-            setSuccess(
+            let sentMsg =
                 data.message || "Kode OTP telah dikirim ke WhatsApp Anda"
-            )
-
             if (data.code) {
                 console.log("OTP (dev only):", data.code)
-                setSuccess(
-                    `Kode OTP telah dikirim. Kode (untuk testing): ${data.code}`
-                )
+                sentMsg = `Kode OTP telah dikirim. Kode (untuk testing): ${data.code}`
             }
-
+            setOtpSentMessage(sentMsg)
+            setOtpResendSecondsLeft(OTP_RESEND_COOLDOWN_SEC)
             setStep("otp")
         } catch (err) {
             console.error("Send OTP error:", err)
             setError("Gagal mengirim kode OTP. Silakan coba lagi.")
         } finally {
             setIsSendingOtp(false)
+        }
+    }
+
+    const handleResendOtp = async () => {
+        if (otpResendSecondsLeft > 0 || isResendingOtp) return
+        if (!validateEmail(email)) {
+            return
+        }
+        setIsResendingOtp(true)
+        setError("")
+        setOtpSentMessage("")
+        try {
+            const emailPayload = email.trim()
+            const response = await fetch(sendResetPasswordOtpApiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: emailPayload,
+                }),
+            })
+
+            const data: SendOtpResponse = await response.json()
+
+            if (!response.ok) {
+                setError(
+                    data.error ||
+                        "Gagal mengirim ulang kode OTP. Silakan coba lagi."
+                )
+                return
+            }
+
+            let sentMsg =
+                data.message || "Kode OTP telah dikirim ke WhatsApp Anda"
+            if (data.code) {
+                console.log("OTP (dev only):", data.code)
+                sentMsg = `Kode OTP telah dikirim. Kode (untuk testing): ${data.code}`
+            }
+            setOtpSentMessage(sentMsg)
+            setOtpResendSecondsLeft(OTP_RESEND_COOLDOWN_SEC)
+        } catch (err) {
+            console.error("Resend OTP error:", err)
+            setError("Gagal mengirim ulang kode OTP. Silakan coba lagi.")
+        } finally {
+            setIsResendingOtp(false)
         }
     }
 
@@ -277,6 +359,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
             }
 
             setSuccess(data.message || "Password berhasil direset")
+            setOtpSentMessage("")
 
             setTimeout(() => {
                 if (globalThis.window !== undefined) {
@@ -665,7 +748,9 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     setEmailError("")
                                                     setError("")
                                                 }}
-                                                onBlur={() => validateEmail(email)}
+                                                onBlur={() =>
+                                                    validateEmail(email)
+                                                }
                                                 placeholder="Email"
                                                 autoComplete="email"
                                                 className="forgot-input"
@@ -698,13 +783,18 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 onChange={(e) => {
                                                     setPhone(
                                                         e.target.value
-                                                            .replaceAll(/\s+/g, "")
+                                                            .replaceAll(
+                                                                /\s+/g,
+                                                                ""
+                                                            )
                                                             .slice(0, 16)
                                                     )
                                                     setPhoneError("")
                                                     setError("")
                                                 }}
-                                                onBlur={() => validatePhone(phone)}
+                                                onBlur={() =>
+                                                    validatePhone(phone)
+                                                }
                                                 placeholder="Nomor HP"
                                                 autoComplete="tel"
                                                 className="forgot-input"
@@ -834,37 +924,127 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 className="forgot-input"
                                                 style={inputDisabled}
                                             />
+                                            {emailError ? (
+                                                <p
+                                                    style={{
+                                                        color: "#ef4444",
+                                                        fontSize: "12px",
+                                                        margin: "4px 0 0 8px",
+                                                    }}
+                                                >
+                                                    {emailError}
+                                                </p>
+                                            ) : null}
                                         </div>
                                         <div>
-                                            <input
-                                                type="text"
-                                                id="forgot-otp"
-                                                name="otp"
-                                                inputMode="numeric"
-                                                value={otp}
-                                                onChange={(e) => {
-                                                    setOtp(
-                                                        e.target.value
-                                                            .replaceAll(
-                                                                /\D/g,
-                                                                ""
-                                                            )
-                                                            .slice(0, 5)
-                                                    )
-                                                    setOtpError("")
-                                                    setError("")
-                                                }}
-                                                placeholder="Kode OTP (5 digit)"
-                                                maxLength={5}
-                                                autoComplete="one-time-code"
-                                                className="forgot-input"
+                                            <div
                                                 style={{
-                                                    ...inputBase,
-                                                    border: otpError
-                                                        ? "1px solid #ef4444"
-                                                        : "1px solid #ffffff",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 12,
                                                 }}
-                                            />
+                                            >
+                                                <input
+                                                    type="text"
+                                                    id="forgot-otp"
+                                                    name="otp"
+                                                    inputMode="numeric"
+                                                    value={otp}
+                                                    onChange={(e) => {
+                                                        setOtp(
+                                                            e.target.value
+                                                                .replaceAll(
+                                                                    /\D/g,
+                                                                    ""
+                                                                )
+                                                                .slice(0, 5)
+                                                        )
+                                                        setOtpError("")
+                                                        setError("")
+                                                    }}
+                                                    placeholder="Kode OTP (4 digit)"
+                                                    maxLength={4}
+                                                    autoComplete="one-time-code"
+                                                    className="forgot-input"
+                                                    style={{
+                                                        ...inputBase,
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        border: otpError
+                                                            ? "1px solid #ef4444"
+                                                            : "1px solid #ffffff",
+                                                    }}
+                                                />
+                                                <div
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent:
+                                                            "flex-end",
+                                                        minWidth: 72,
+                                                    }}
+                                                >
+                                                    {isResendingOtp ? (
+                                                        <span
+                                                            style={{
+                                                                fontSize:
+                                                                    "13px",
+                                                                color: "#666666",
+                                                                whiteSpace:
+                                                                    "nowrap",
+                                                            }}
+                                                        >
+                                                            Mengirim...
+                                                        </span>
+                                                    ) : null}
+                                                    {!isResendingOtp &&
+                                                    otpResendSecondsLeft > 0 ? (
+                                                        <span
+                                                            style={{
+                                                                fontSize:
+                                                                    "15px",
+                                                                fontWeight: 500,
+                                                                color: "#24252c",
+                                                                fontFamily:
+                                                                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                                                fontVariantNumeric:
+                                                                    "tabular-nums",
+                                                                letterSpacing:
+                                                                    "0.02em",
+                                                                whiteSpace:
+                                                                    "nowrap",
+                                                            }}
+                                                            aria-live="polite"
+                                                            aria-label={`Sisa waktu tunggu kirim ulang OTP ${formatOtpCooldown(otpResendSecondsLeft)}`}
+                                                        >
+                                                            {formatOtpCooldown(
+                                                                otpResendSecondsLeft
+                                                            )}
+                                                        </span>
+                                                    ) : null}
+                                                    {!isResendingOtp &&
+                                                    otpResendSecondsLeft <= 0 ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={
+                                                                handleResendOtp
+                                                            }
+                                                            style={{
+                                                                ...linkStyle,
+                                                                fontSize:
+                                                                    "13px",
+                                                                whiteSpace:
+                                                                    "nowrap",
+                                                                textAlign:
+                                                                    "right",
+                                                            }}
+                                                        >
+                                                            Minta kode baru
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            </div>
                                             {otpError && (
                                                 <p
                                                     style={{
@@ -875,6 +1055,49 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 >
                                                     {otpError}
                                                 </p>
+                                            )}
+                                            {otpSentMessage && (
+                                                <div
+                                                    style={{
+                                                        margin: "6px 0 0 8px",
+                                                        display: "flex",
+                                                        alignItems:
+                                                            "flex-start",
+                                                        gap: 8,
+                                                    }}
+                                                >
+                                                    <p
+                                                        style={{
+                                                            color: "#16a34a",
+                                                            fontSize: "14px",
+                                                            margin: 0,
+                                                            flex: 1,
+                                                        }}
+                                                    >
+                                                        {otpSentMessage}
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setOtpSentMessage(
+                                                                ""
+                                                            )
+                                                        }
+                                                        aria-label="Tutup pesan OTP"
+                                                        style={{
+                                                            border: "none",
+                                                            background:
+                                                                "transparent",
+                                                            color: "#16a34a",
+                                                            cursor: "pointer",
+                                                            fontSize: "14px",
+                                                            lineHeight: 1,
+                                                            padding: 0,
+                                                        }}
+                                                    >
+                                                        x
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                         <div>
@@ -1165,6 +1388,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     setConfirmPassword("")
                                                     setError("")
                                                     setSuccess("")
+                                                    setOtpSentMessage("")
                                                     setOtpError("")
                                                     setPhoneError("")
                                                     setPasswordError("")

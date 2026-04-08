@@ -20,6 +20,7 @@ type RegisterClientAreaProps = {
     bubblesImageUrl?: string
     loginUrl?: string
     accountsUrl?: string
+    whatsappUrl?: string
     privacyPolicyUrl?: string
     termsOfBusinessUrl?: string
     redirectIfAlreadyLoggedIn?: boolean
@@ -45,17 +46,14 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
         sendVerificationCodeApiUrl = `${API_BASE}/auth/send-verification-code`,
         accentColor = "#69d7f6",
         pageBgColor = "#69d7f6",
-        logoUrl =
-            "https://cdn2.triveinvest.co.id/assets/img/sca/logo.svg",
+        logoUrl = "https://cdn2.triveinvest.co.id/assets/img/sca/logo.svg",
         homeUrl = `${BASE}/`,
-        bubblesImageUrl =
-            "https://cdn2.triveinvest.co.id/assets/img/sca/bubbles-small.png",
+        bubblesImageUrl = "https://cdn2.triveinvest.co.id/assets/img/sca/bubbles-small.png",
         loginUrl = `${BASE}/login`,
         accountsUrl = `${BASE}/accounts`,
-        privacyPolicyUrl =
-            "https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf",
-        termsOfBusinessUrl =
-            "https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf",
+        whatsappUrl = "https://wa.me/628815921000",
+        privacyPolicyUrl = "https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf",
+        termsOfBusinessUrl = "https://cdn2.triveinvest.co.id/pdf/legalitas/Terms_of_Business.pdf",
         redirectIfAlreadyLoggedIn = true,
         fullViewport = false,
     } = props
@@ -431,6 +429,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                     .register-submit-btn { width: 100% !important; }
                     .register-submit-btn { min-height: 48px !important; min-width: 100% !important; }
                     .register-bubbles-wrap { width: 90px !important; height: 80px !important; }
+                    .register-wa-btn { bottom: 20px !important; right: 20px !important; padding: 14px !important; }
                 }
                 @media (max-width: 767px) {
                     .register-left-col { padding: 28px 16px 18px !important; }
@@ -441,6 +440,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                     .register-form-title { font-size: 1.55rem !important; margin-bottom: 16px !important; }
                     .register-card input { height: 48px !important; padding-left: 18px !important; padding-right: 18px !important; }
                     .register-submit-btn { font-size: 14px !important; padding: 14px 20px 12px !important; }
+                    .register-wa-btn { bottom: 14px !important; right: 14px !important; padding: 12px !important; }
                 }
                 .register-submit-btn:not(:disabled) {
                     transition: transform 0.12s ease, background-color 0.12s ease;
@@ -454,8 +454,56 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                 .register-form-footer-wrap { margin-top: 16px; }
                 @media (min-width: 640px) {
                     .register-form-footer-wrap { margin-top: 24px; }
+                    .register-wa-chat-label { display: inline-block !important; }
                 }
             `}</style>
+
+            {whatsappUrl ? (
+                <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chat dengan WhatsApp"
+                    className="register-wa-btn"
+                    style={{
+                        position: "fixed",
+                        bottom: 24,
+                        right: 24,
+                        zIndex: 50,
+                        backgroundColor: "#25D366",
+                        color: "#ffffff",
+                        borderRadius: 9999,
+                        padding: "16px",
+                        boxShadow:
+                            "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.15)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textDecoration: "none",
+                    }}
+                >
+                    <svg
+                        width={24}
+                        height={24}
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982a.524.524 0 01-.656-.68l.985-3.74-.214-.361a9.87 9.87 0 01-1.378-5.03c0-5.45 4.436-9.884 9.884-9.884 2.64 0 5.123 1.03 6.979 2.898a9.825 9.825 0 012.897 6.98c0 5.45-4.436 9.884-9.884 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.16 11.892c0 2.096.547 4.142 1.588 5.945L.05 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.89-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                    </svg>
+                    <span
+                        style={{
+                            marginLeft: 8,
+                            fontSize: 14,
+                            fontWeight: 500,
+                            display: "none",
+                        }}
+                        className="register-wa-chat-label"
+                    >
+                        Chat
+                    </span>
+                </a>
+            ) : null}
 
             <div
                 style={{
@@ -672,7 +720,9 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                                 setEmail(e.target.value)
                                                 setSubmitError("")
                                                 if (emailError)
-                                                    validateEmail(e.target.value)
+                                                    validateEmail(
+                                                        e.target.value
+                                                    )
                                             }}
                                             onBlur={() => validateEmail(email)}
                                             placeholder="Email"
@@ -727,8 +777,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                                         width: "100%",
                                                         backgroundColor:
                                                             "#ffffff",
-                                                        border:
-                                                            "1px solid #ffffff",
+                                                        border: "1px solid #ffffff",
                                                         borderRadius: "70px",
                                                         color: "#24252c",
                                                         fontSize: "14px",
@@ -757,8 +806,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                                         width: 20,
                                                         height: 14,
                                                         display: "flex",
-                                                        flexDirection:
-                                                            "column",
+                                                        flexDirection: "column",
                                                         borderRadius: 2,
                                                         overflow: "hidden",
                                                     }}
@@ -1195,8 +1243,8 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                                 Saya mengkonfirmasi dan
                                                 memberikan izin kepada Trive
                                                 Invest untuk menghubungi saya
-                                                melalui telepon, email, SMS,
-                                                dan WhatsApp untuk keperluan
+                                                melalui telepon, email, SMS, dan
+                                                WhatsApp untuk keperluan
                                                 pemasaran. Saya memahami bahwa
                                                 saya dapat memilih untuk tidak
                                                 menerima komunikasi pemasaran
@@ -1340,8 +1388,7 @@ function RegisterClientArea(props: RegisterClientAreaProps) {
                                                 fontSize: "15px",
                                                 fontWeight: 500,
                                                 minWidth: 217,
-                                                padding:
-                                                    "16px 25px 13px",
+                                                padding: "16px 25px 13px",
                                                 cursor: isSubmitting
                                                     ? "not-allowed"
                                                     : "pointer",
@@ -1393,9 +1440,11 @@ RegisterClientArea.defaultProps = {
     pageBgColor: "#69d7f6",
     logoUrl: "https://cdn2.triveinvest.co.id/assets/img/sca/logo.svg",
     homeUrl: `${BASE}/`,
-    bubblesImageUrl: "https://cdn2.triveinvest.co.id/assets/img/sca/bubbles-small.png",
+    bubblesImageUrl:
+        "https://cdn2.triveinvest.co.id/assets/img/sca/bubbles-small.png",
     loginUrl: `${BASE}/login`,
     accountsUrl: `${BASE}/accounts`,
+    whatsappUrl: "https://wa.me/628815921000",
     privacyPolicyUrl:
         "https://cdn2.triveinvest.co.id/pdf/legalitas/Privacy-Policy.pdf",
     termsOfBusinessUrl:
@@ -1440,7 +1489,8 @@ addPropertyControls(RegisterClientArea, {
     bubblesImageUrl: {
         type: ControlType.String,
         title: "Bubbles image URL",
-        defaultValue: "https://cdn2.triveinvest.co.id/assets/img/sca/bubbles-small.png",
+        defaultValue:
+            "https://cdn2.triveinvest.co.id/assets/img/sca/bubbles-small.png",
     },
     loginUrl: {
         type: ControlType.String,
@@ -1451,6 +1501,12 @@ addPropertyControls(RegisterClientArea, {
         type: ControlType.String,
         title: "After register redirect",
         defaultValue: `${BASE}/accounts`,
+    },
+    whatsappUrl: {
+        type: ControlType.String,
+        title: "WhatsApp button URL (empty = hide)",
+        defaultValue: "https://wa.me/628815921000",
+        placeholder: "https://wa.me/…",
     },
     privacyPolicyUrl: {
         type: ControlType.String,
@@ -1481,4 +1537,3 @@ addPropertyControls(RegisterClientArea, {
 })
 
 export default RegisterClientArea
-
