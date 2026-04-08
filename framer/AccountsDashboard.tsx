@@ -22,15 +22,23 @@ interface AccountRow {
     id: number
     type?: string
     accountType?: string
+    accountName?: string
     platform?: string
     login?: string
     serverName?: string
+    status?: string
+    currency?: string
+    nickname?: string | null
+    leverage?: string | number
+    conversionRate?: string | number
+    kursKonversi?: string | number
 }
+
+type AccountTab = "live" | "demo"
 
 type AccountsDashboardProps = {
     meApiUrl?: string
     accountsApiUrl?: string
-    resetPasswordApiUrl?: string
     loginUrl?: string
     accountsUrl?: string
     platformUrl?: string
@@ -65,7 +73,6 @@ function AccountsDashboard(props: AccountsDashboardProps) {
     const {
         meApiUrl = `${API_BASE}/auth/me`,
         accountsApiUrl = `${API_BASE}/accounts`,
-        resetPasswordApiUrl = `${API_BASE}/accounts/reset-password`,
         loginUrl = `${BASE}/login`,
         accountsUrl = `${BASE}/accounts`,
         platformUrl = `${BASE}/platform`,
@@ -92,7 +99,8 @@ function AccountsDashboard(props: AccountsDashboardProps) {
     const [userInitial, setUserInitial] = React.useState("—")
     const [accounts, setAccounts] = React.useState<AccountRow[]>([])
     const [loadingAccounts, setLoadingAccounts] = React.useState(true)
-    const [resettingId, setResettingId] = React.useState<number | null>(null)
+    const [activeAccountTab, setActiveAccountTab] =
+        React.useState<AccountTab>("live")
 
     const [toast, setToast] = React.useState<{
         open: boolean
@@ -204,55 +212,30 @@ function AccountsDashboard(props: AccountsDashboardProps) {
     const hasLiveAccount = () =>
         accounts.some((a) => (a.type || "").toLowerCase() === "live")
 
+    const isLiveType = React.useCallback(
+        (a: AccountRow) => (a.type || "").toLowerCase() === "live",
+        []
+    )
+    const isDemoType = React.useCallback(
+        (a: AccountRow) => (a.type || "").toLowerCase() === "demo",
+        []
+    )
+
+    const liveAccounts = React.useMemo(
+        () => accounts.filter((a) => isLiveType(a)),
+        [accounts, isLiveType]
+    )
+    const demoAccounts = React.useMemo(
+        () => accounts.filter((a) => isDemoType(a)),
+        [accounts, isDemoType]
+    )
+    const visibleAccounts =
+        activeAccountTab === "live" ? liveAccounts : demoAccounts
+
     const handleLogout = () => {
         if (typeof window === "undefined") return
         localStorage.removeItem("token")
         window.location.href = loginUrl
-    }
-
-    const handleResetPassword = async (platformId: number) => {
-        if (typeof window === "undefined") return
-        const token = localStorage.getItem("token")
-        if (!token) return
-        setResettingId(platformId)
-        try {
-            const res = await fetch(resetPasswordApiUrl, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ platformId }),
-            })
-            if (res.ok) {
-                setToast({
-                    open: true,
-                    ok: true,
-                    title: "Berhasil",
-                    message:
-                        "Request reset password Anda berhasil kami terima. Silakan periksa email Anda.",
-                })
-            } else {
-                const err = await res.json().catch(() => ({}))
-                setToast({
-                    open: true,
-                    ok: false,
-                    title: "Gagal",
-                    message:
-                        err.error || "Gagal mengirim request reset password",
-                })
-            }
-        } catch {
-            setToast({
-                open: true,
-                ok: false,
-                title: "Gagal",
-                message:
-                    "Terjadi kesalahan saat mengirim request reset password",
-            })
-        } finally {
-            setResettingId(null)
-        }
     }
 
     /*
@@ -1212,29 +1195,64 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                     </div>
                     <div
                         style={{
-                            background: "#fff",
+                            background: "#f8fafc",
                             borderRadius: 8,
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                            border: "1px solid #e5e7eb",
+                            overflow: "hidden",
                         }}
                     >
-                        <div style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <div
+                            style={{
+                                borderBottom: "1px solid #e5e7eb",
+                                display: "flex",
+                                alignItems: "stretch",
+                                gap: 0,
+                            }}
+                        >
                             <button
                                 type="button"
+                                onClick={() => setActiveAccountTab("live")}
                                 style={{
-                                    padding: "12px 24px",
+                                    display: "inline-flex",
+                                    padding: "28px 24px 22px",
                                     border: "none",
                                     background: "none",
                                     fontSize: 14,
-                                    fontWeight: 500,
-                                    color: accentColor,
-                                    borderBottom: `2px solid ${accentColor}`,
-                                    cursor: "default",
+                                    fontWeight: 700,
+                                    color: "#2b2e38",
+                                    borderBottom:
+                                        activeAccountTab === "live"
+                                            ? `4px solid ${accentColor}`
+                                            : "2px solid transparent",
+                                    cursor: "pointer",
+                                    textAlign: "left",
                                 }}
                             >
                                 Akun Live
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveAccountTab("demo")}
+                                style={{
+                                    display: "inline-flex",
+                                    padding: "28px 24px 22px",
+                                    border: "none",
+                                    background: "none",
+                                    fontSize: 14,
+                                    fontWeight: 700,
+                                    color: "#2b2e38",
+                                    borderBottom:
+                                        activeAccountTab === "demo"
+                                            ? `4px solid ${accentColor}`
+                                            : "2px solid transparent",
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                }}
+                            >
+                                Akun Demo
+                            </button>
                         </div>
-                        <div style={{ padding: 24 }}>
+                        <div style={{ padding: "18px 24px 22px" }}>
                             {loadingAccounts ? (
                                 <p
                                     style={{
@@ -1244,7 +1262,7 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                 >
                                     Memuat data...
                                 </p>
-                            ) : accounts.length === 0 ? (
+                            ) : visibleAccounts.length === 0 ? (
                                 <div
                                     style={{
                                         background: "#fffbeb",
@@ -1277,8 +1295,9 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                             color: "#854d0e",
                                         }}
                                     >
-                                        Akun Anda tidak memiliki data karena
-                                        belum ada deposit yang dilakukan.
+                                        {activeAccountTab === "live"
+                                            ? "Belum ada data akun live."
+                                            : "Belum ada data akun demo."}
                                     </p>
                                 </div>
                             ) : (
@@ -1286,7 +1305,7 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                     <table
                                         style={{
                                             width: "100%",
-                                            minWidth: 720,
+                                            minWidth: 980,
                                             borderCollapse: "collapse",
                                         }}
                                     >
@@ -1298,18 +1317,16 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                 }}
                                             >
                                                 {[
-                                                    "Type",
-                                                    "Account Type",
-                                                    "Platform",
-                                                    "Login",
-                                                    "Server Name",
-                                                    "Aksi",
+                                                    "Nama Akun",
+                                                    "Jenis Akun",
+                                                    "Leverage",
+                                                    "Kurs Konversi",
                                                 ].map((h) => (
                                                     <th
                                                         key={h}
                                                         style={{
                                                             textAlign: "left",
-                                                            padding: "12px 8px",
+                                                            padding: "12px 10px",
                                                             fontSize: 13,
                                                             fontWeight: 600,
                                                             color: "#475569",
@@ -1323,7 +1340,7 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {accounts.map((account) => (
+                                            {visibleAccounts.map((account) => (
                                                 <tr
                                                     key={account.id}
                                                     style={{
@@ -1333,115 +1350,51 @@ function AccountsDashboard(props: AccountsDashboardProps) {
                                                 >
                                                     <td
                                                         style={{
-                                                            padding: "12px 8px",
+                                                            padding: "14px 10px",
                                                             fontSize: 13,
+                                                            color: "#111827",
                                                         }}
                                                     >
-                                                        <span
-                                                            style={{
-                                                                padding:
-                                                                    "4px 10px",
-                                                                borderRadius: 9999,
-                                                                fontSize: 12,
-                                                                fontWeight: 500,
-                                                                background:
-                                                                    (
-                                                                        account.type ||
-                                                                        ""
-                                                                    ).toLowerCase() ===
-                                                                    "live"
-                                                                        ? "#dcfce7"
-                                                                        : "#f1f5f9",
-                                                                color:
-                                                                    (
-                                                                        account.type ||
-                                                                        ""
-                                                                    ).toLowerCase() ===
-                                                                    "live"
-                                                                        ? "#166534"
-                                                                        : "#475569",
-                                                            }}
-                                                        >
-                                                            {account.type ||
-                                                                "Demo"}
-                                                        </span>
+                                                        {account.login &&
+                                                        account.nickname
+                                                            ? `${account.login} - ${account.nickname}`
+                                                            : account.login ||
+                                                              account.nickname ||
+                                                              account.accountName ||
+                                                              "-"}
                                                     </td>
                                                     <td
                                                         style={{
-                                                            padding: "12px 8px",
+                                                            padding: "14px 10px",
                                                             fontSize: 13,
+                                                            color: "#111827",
                                                         }}
                                                     >
-                                                        {account.accountType}
+                                                        {account.accountType ||
+                                                            account.type ||
+                                                            "-"}
                                                     </td>
                                                     <td
                                                         style={{
-                                                            padding: "12px 8px",
+                                                            padding: "14px 10px",
                                                             fontSize: 13,
+                                                            color: "#111827",
                                                         }}
                                                     >
-                                                        MetaTrader 5
+                                                        {account.leverage
+                                                            ? `1:${account.leverage}`
+                                                            : "-"}
                                                     </td>
                                                     <td
                                                         style={{
-                                                            padding: "12px 8px",
+                                                            padding: "14px 10px",
                                                             fontSize: 13,
+                                                            color: "#111827",
                                                         }}
                                                     >
-                                                        {account.login}
-                                                    </td>
-                                                    <td
-                                                        style={{
-                                                            padding: "12px 8px",
-                                                            fontSize: 13,
-                                                        }}
-                                                    >
-                                                        {account.serverName ||
-                                                            "TriveInvest-MT5-Live"}
-                                                    </td>
-                                                    <td
-                                                        style={{
-                                                            padding: "12px 8px",
-                                                        }}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleResetPassword(
-                                                                    account.id
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                resettingId ===
-                                                                account.id
-                                                            }
-                                                            style={{
-                                                                padding:
-                                                                    "8px 16px",
-                                                                fontSize: 12,
-                                                                fontWeight: 500,
-                                                                color: "#fff",
-                                                                background:
-                                                                    resettingId ===
-                                                                    account.id
-                                                                        ? "#64748b"
-                                                                        : "#000",
-                                                                border: "none",
-                                                                borderRadius: 9999,
-                                                                cursor:
-                                                                    resettingId ===
-                                                                    account.id
-                                                                        ? "wait"
-                                                                        : "pointer",
-                                                                whiteSpace:
-                                                                    "nowrap",
-                                                            }}
-                                                        >
-                                                            {resettingId ===
-                                                            account.id
-                                                                ? "Mengirim..."
-                                                                : "Reset Password"}
-                                                        </button>
+                                                        {account.conversionRate ??
+                                                            account.kursKonversi ??
+                                                            "-"}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -1523,7 +1476,6 @@ function AccountsDashboard(props: AccountsDashboardProps) {
 AccountsDashboard.defaultProps = {
     meApiUrl: `${API_BASE}/auth/me`,
     accountsApiUrl: `${API_BASE}/accounts`,
-    resetPasswordApiUrl: `${API_BASE}/accounts/reset-password`,
     loginUrl: `${BASE}/login`,
     accountsUrl: `${BASE}/accounts`,
     platformUrl: `${BASE}/platform`,
@@ -1553,11 +1505,6 @@ addPropertyControls(AccountsDashboard, {
         type: ControlType.String,
         title: "GET /api/accounts",
         defaultValue: `${API_BASE}/accounts`,
-    },
-    resetPasswordApiUrl: {
-        type: ControlType.String,
-        title: "POST reset-password",
-        defaultValue: `${API_BASE}/accounts/reset-password`,
     },
     loginUrl: {
         type: ControlType.String,
