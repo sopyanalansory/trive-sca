@@ -111,12 +111,6 @@ function normalizeStatus(status: string): string {
   return "Enabled";
 }
 
-function isPersistableStatus(status: string | null): boolean {
-  if (!status) return false;
-  const normalized = status.trim().toLowerCase();
-  return normalized === "enabled" || normalized === "read-only";
-}
-
 function normalizeSwapFree(swapFree: string): string {
   if (!swapFree) return "Tidak";
   const normalized = swapFree.trim().toLowerCase();
@@ -337,10 +331,7 @@ export async function fetchAndPersistPlatformsForUser(
         "ClientGroupName__c",
       ]) || null;
     const rawStatus = pickRowString(row, ["Status__c", "status", "Status"]) || null;
-    if (rawStatus === null || !isPersistableStatus(rawStatus)) {
-      continue;
-    }
-    const status = normalizeStatus(rawStatus);
+    const status = normalizeStatus(rawStatus || "");
     const currency =
       pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
     const leverage =

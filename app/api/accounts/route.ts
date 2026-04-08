@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         type
       FROM platforms 
       WHERE user_id = $1
+        AND LOWER(TRIM(COALESCE(status, ''))) IN ('enabled', 'read-only')
       ORDER BY created_at DESC`,
       [decoded.userId]
     );
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
               type
             FROM platforms 
             WHERE user_id = $1
+              AND LOWER(TRIM(COALESCE(status, ''))) IN ('enabled', 'read-only')
             ORDER BY created_at DESC`,
             [decoded.userId]
           );
