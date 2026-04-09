@@ -41,6 +41,264 @@ async function postGetPlatformsFlow(
   });
 }
 
+/**
+ * Calls Trive_Invest_API_Get_Platforms_by_Account_or_Lead and returns parsed platform rows.
+ */
+async function getPlatformRowsFromGetPlatformsFlow(
+  accountOrLeadId: string
+): Promise<Record<string, unknown>[]> {
+  const token = await getValidAccessToken();
+  let response = await postGetPlatformsFlow(token, accountOrLeadId);
+
+  if (response.status === 401 || response.status === 403) {
+    const fresh = await requestSalesforceAccessToken();
+    await saveSalesforceAccessToken(fresh);
+    response = await postGetPlatformsFlow(fresh.access_token, accountOrLeadId);
+  }
+
+  const raw = await response.text();
+  let parsed: unknown = null;
+  try {
+    parsed = raw ? JSON.parse(raw) : null;
+  } catch {
+    throw new Error("Salesforce platforms response is not valid JSON");
+  }
+
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(`Salesforce Get Platforms failed: HTTP ${response.status}`),
+      { details: parsed }
+    );
+  }
+
+  return extractPlatformRowsFromFlow(parsed);
+}
+
+function normalizeSalesforceId(id: string): string {
+  return id.trim().slice(0, 100);
+}
+
+function salesforceIdsMatch(a: string, b: string): boolean {
+  const t = normalizeSalesforceId(a).toLowerCase();
+  const u = normalizeSalesforceId(b).toLowerCase();
+  if (t === u) return true;
+  if (t.length >= 15 && u.length >= 15 && t.slice(0, 15) === u.slice(0, 15)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Upserts one platform row from a Salesforce flow record. Returns false if the row is skipped (incomplete).
+ */
+async function upsertSinglePlatformRow(
+  userId: number,
+  accountIdForPlatform: string,
+  row: Record<string, unknown>
+): Promise<boolean> {
+  const login = pickRowString(row, [
+    "LoginNumber__c",
+    "loginNumber",
+    "login_number",
+    "LoginNumber",
+    "Login Number",
+  ]);
+  const serverName = pickRowString(row, [
+    "serverName",
+    "server_name",
+    "Server Name",
+    "ServerName__c",
+    "ServerNameFormula__c",
+  ]);
+  if (!login || !serverName) {
+    return false;
+  }
+
+  const platformRegistrationId = pickRowString(row, ["Id", "id"]);
+  if (!platformRegistrationId) {
+    return false;
+  }
+
+  const accountId = accountIdForPlatform;
+
+  const accountType =
+    pickRowString(row, [
+      "accountType",
+      "account_type",
+      "Account Type",
+      "AccountType__c",
+    ]) || null;
+  const clientGroupName =
+    pickRowString(row, [
+      "clientGroupName",
+      "client_group_name",
+      "Client Group Name",
+      "ClientGroupName__c",
+    ]) || null;
+  const rawStatus = pickRowString(row, ["Status__c", "status", "Status"]) || null;
+  const status = normalizeStatus(rawStatus || "");
+  const currency =
+    pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
+  const leverage =
+    pickRowString(row, ["leverage", "Leverage", "Leverage__c"]) || null;
+  const nickname = normalizeNullableText(
+    pickRowString(row, ["nickname", "Nickname", "Nickname__c"]) || null
+  );
+  const fixRate =
+    pickRowString(row, ["fixRate", "FixRate", "Fix_Rate__c"]) || null;
+  const swapFree = normalizeSwapFree(
+    pickRowString(row, ["swapFree", "swap_free", "Swap Free", "SwapFree__c"]) ||
+      "Tidak"
+  );
+  const type =
+    pickRowString(row, ["type", "Type", "accountCategory", "Type__c"]) ||
+    inferTypeFromClientGroupName(clientGroupName) ||
+    (pickRowBoolean(row, ["IsLive__c"]) ? "Live" : null) ||
+    (pickRowBoolean(row, ["IsDemo__c"]) ? "Demo" : null) ||
+    "Live";
+
+  await pool.query(
+    `INSERT INTO platforms (
+        platform_registration_id, user_id, account_id, login_number, server_name,
+        account_type, client_group_name, status, currency, leverage, nickname,
+        fix_rate, swap_free, type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ON CONFLICT (platform_registration_id) DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        account_id = EXCLUDED.account_id,
+        login_number = EXCLUDED.login_number,
+        server_name = EXCLUDED.server_name,
+        account_type = EXCLUDED.account_type,
+        client_group_name = EXCLUDED.client_group_name,
+        status = EXCLUDED.status,
+        currency = EXCLUDED.currency,
+        leverage = EXCLUDED.leverage,
+        nickname = EXCLUDED.nickname,
+        fix_rate = EXCLUDED.fix_rate,
+        swap_free = EXCLUDED.swap_free,
+        type = EXCLUDED.type,
+        updated_at = CURRENT_TIMESTAMP`,
+    [
+      normalizeSalesforceId(platformRegistrationId),
+      userId,
+      accountId,
+      login,
+      serverName,
+      accountType,
+      clientGroupName,
+      status,
+      currency,
+      leverage,
+      nickname,
+      fixRate,
+      swapFree,
+      type,
+    ]
+  );
+  return true;
+}
+
+export type SyncPlatformFromSalesforceWebhookResult =
+  | { ok: true; action: "inserted" | "updated" }
+  | { ok: false; error: string; message: string };
+
+/**
+ * Untuk dipanggil dari Salesforce (Outbound Message / Flow): sync satu platform
+ * lewat flow Get Platforms by Account or Lead, lalu upsert baris yang Id-nya = platformId.
+ */
+export async function syncPlatformFromSalesforceWebhook(
+  accountOrLeadId: string,
+  platformId: string
+): Promise<SyncPlatformFromSalesforceWebhookResult> {
+  const aid = accountOrLeadId.trim();
+  const pid = platformId.trim();
+  if (!aid || !pid) {
+    return {
+      ok: false,
+      error: "VALIDATION",
+      message: "accountOrLeadId and platformId are required",
+    };
+  }
+
+  const userResult = await pool.query(
+    `SELECT id, account_id FROM users
+     WHERE LOWER(TRIM(COALESCE(account_id, ''))) = LOWER($1)
+        OR LOWER(TRIM(COALESCE(lead_id, ''))) = LOWER($1)
+     LIMIT 1`,
+    [aid]
+  );
+
+  if (userResult.rows.length === 0) {
+    return {
+      ok: false,
+      error: "USER_NOT_FOUND",
+      message: "No user found for this Account or Lead ID",
+    };
+  }
+
+  const userId = userResult.rows[0].id as number;
+  const accountIdForPlatform =
+    (userResult.rows[0].account_id &&
+      String(userResult.rows[0].account_id).trim()) ||
+    aid;
+
+  let rows: Record<string, unknown>[];
+  try {
+    rows = await getPlatformRowsFromGetPlatformsFlow(aid);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Failed to call Salesforce";
+    return { ok: false, error: "SALESFORCE_ERROR", message: msg };
+  }
+
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      error: "PLATFORM_NOT_IN_RESPONSE",
+      message: "No platform data in Salesforce response",
+    };
+  }
+
+  const row = rows.find((r) => {
+    const id = pickRowString(r, ["Id", "id"]);
+    if (!id) return false;
+    return salesforceIdsMatch(id, pid);
+  });
+
+  if (!row) {
+    return {
+      ok: false,
+      error: "PLATFORM_NOT_IN_RESPONSE",
+      message: "Platform not found in Salesforce response for this platformId",
+    };
+  }
+
+  const flowId = pickRowString(row, ["Id", "id"]);
+  const key = flowId ? normalizeSalesforceId(flowId) : normalizeSalesforceId(pid);
+
+  const existing = await pool.query(
+    "SELECT id FROM platforms WHERE platform_registration_id = $1",
+    [key]
+  );
+  const action: "inserted" | "updated" =
+    existing.rows.length > 0 ? "updated" : "inserted";
+
+  const persisted = await upsertSinglePlatformRow(
+    userId,
+    accountIdForPlatform,
+    row
+  );
+  if (!persisted) {
+    return {
+      ok: false,
+      error: "ROW_INCOMPLETE",
+      message:
+        "Incomplete platform data from Salesforce (login, server, or Id)",
+    };
+  }
+
+  return { ok: true, action };
+}
+
 function pickRowString(
   row: Record<string, unknown>,
   candidates: string[]
@@ -258,137 +516,15 @@ export async function fetchAndPersistPlatformsForUser(
       ? String(userResult.rows[0].account_id).trim()
       : null;
   if (!userAccountId) {
-    throw new Error("Account ID user tidak ditemukan di table users");
+    throw new Error("User account_id not found in users table");
   }
 
-  const token = await getValidAccessToken();
-  let response = await postGetPlatformsFlow(token, accountOrLeadId);
-
-  if (response.status === 401 || response.status === 403) {
-    const fresh = await requestSalesforceAccessToken();
-    await saveSalesforceAccessToken(fresh);
-    response = await postGetPlatformsFlow(fresh.access_token, accountOrLeadId);
-  }
-
-  const raw = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    throw new Error("Respons Salesforce platforms bukan JSON valid");
-  }
-
-  if (!response.ok) {
-    throw Object.assign(
-      new Error(`Salesforce Get Platforms gagal: HTTP ${response.status}`),
-      { details: parsed }
-    );
-  }
-
-  const rows = extractPlatformRowsFromFlow(parsed);
+  const rows = await getPlatformRowsFromGetPlatformsFlow(accountOrLeadId);
   if (rows.length === 0) {
     return;
   }
 
   for (const row of rows) {
-    const login = pickRowString(row, [
-      "LoginNumber__c",
-      "loginNumber",
-      "login_number",
-      "LoginNumber",
-      "Login Number",
-    ]);
-    const serverName = pickRowString(row, [
-      "serverName",
-      "server_name",
-      "Server Name",
-      "ServerName__c",
-      "ServerNameFormula__c",
-    ]);
-    if (!login || !serverName) {
-      continue;
-    }
-
-    const platformRegistrationId = pickRowString(row, ["Id", "id"]);
-    if (!platformRegistrationId) {
-      continue;
-    }
-
-    const accountId = userAccountId;
-
-    const accountType =
-      pickRowString(row, [
-        "accountType",
-        "account_type",
-        "Account Type",
-        "AccountType__c",
-      ]) || null;
-    const clientGroupName =
-      pickRowString(row, [
-        "clientGroupName",
-        "client_group_name",
-        "Client Group Name",
-        "ClientGroupName__c",
-      ]) || null;
-    const rawStatus = pickRowString(row, ["Status__c", "status", "Status"]) || null;
-    const status = normalizeStatus(rawStatus || "");
-    const currency =
-      pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
-    const leverage =
-      pickRowString(row, ["leverage", "Leverage", "Leverage__c"]) || null;
-    const nickname = normalizeNullableText(
-      pickRowString(row, ["nickname", "Nickname", "Nickname__c"]) || null
-    );
-    const fixRate =
-      pickRowString(row, ["fixRate", "FixRate", "Fix_Rate__c"]) || null;
-    const swapFree = normalizeSwapFree(
-      pickRowString(row, ["swapFree", "swap_free", "Swap Free", "SwapFree__c"]) ||
-        "Tidak"
-    );
-    const type =
-      pickRowString(row, ["type", "Type", "accountCategory", "Type__c"]) ||
-      inferTypeFromClientGroupName(clientGroupName) ||
-      (pickRowBoolean(row, ["IsLive__c"]) ? "Live" : null) ||
-      (pickRowBoolean(row, ["IsDemo__c"]) ? "Demo" : null) ||
-      "Live";
-
-    await pool.query(
-      `INSERT INTO platforms (
-        platform_registration_id, user_id, account_id, login_number, server_name,
-        account_type, client_group_name, status, currency, leverage, nickname,
-        fix_rate, swap_free, type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      ON CONFLICT (platform_registration_id) DO UPDATE SET
-        user_id = EXCLUDED.user_id,
-        account_id = EXCLUDED.account_id,
-        login_number = EXCLUDED.login_number,
-        server_name = EXCLUDED.server_name,
-        account_type = EXCLUDED.account_type,
-        client_group_name = EXCLUDED.client_group_name,
-        status = EXCLUDED.status,
-        currency = EXCLUDED.currency,
-        leverage = EXCLUDED.leverage,
-        nickname = EXCLUDED.nickname,
-        fix_rate = EXCLUDED.fix_rate,
-        swap_free = EXCLUDED.swap_free,
-        type = EXCLUDED.type,
-        updated_at = CURRENT_TIMESTAMP`,
-      [
-        platformRegistrationId.slice(0, 100),
-        userId,
-        accountId,
-        login,
-        serverName,
-        accountType,
-        clientGroupName,
-        status,
-        currency,
-        leverage,
-        nickname,
-        fixRate,
-        swapFree,
-        type,
-      ]
-    );
+    await upsertSinglePlatformRow(userId, userAccountId, row);
   }
 }

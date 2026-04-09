@@ -112,7 +112,6 @@ describe("GET /api/accounts", () => {
     expect(res.status).toBe(200);
     expect(fetchAndPersistPlatformsForUser).toHaveBeenCalledWith(
       7,
-      "001Oj00000Ctc7QIAR",
       "001Oj00000Ctc7QIAR"
     );
     const json = await res.json();
