@@ -136,7 +136,8 @@ async function upsertSinglePlatformRow(
       "ClientGroupName__c",
     ]) || null;
   const rawStatus = pickRowString(row, ["Status__c", "status", "Status"]) || null;
-  const status = normalizeStatus(rawStatus || "");
+  const trimmedStatus = rawStatus?.trim() ?? "";
+  const status = trimmedStatus ? trimmedStatus : "Enabled";
   const currency =
     pickRowString(row, ["currency", "Currency", "Currency__c"]) || "USD";
   const leverage =
@@ -358,15 +359,6 @@ function pickRowBoolean(
     }
   }
   return null;
-}
-
-function normalizeStatus(status: string): string {
-  if (!status) return "Enabled";
-  const normalized = status.trim();
-  if (normalized === "Read-Only" || normalized === "Disabled") {
-    return normalized;
-  }
-  return "Enabled";
 }
 
 function normalizeSwapFree(swapFree: string): string {

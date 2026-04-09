@@ -74,16 +74,6 @@ function parseCSVLine(line: string): string[] {
   return values;
 }
 
-// Normalize status
-function normalizeStatus(status: string): string {
-  if (!status) return 'Enabled';
-  const normalized = status.trim();
-  if (normalized === 'Read-Only' || normalized === 'Disabled') {
-    return normalized;
-  }
-  return 'Enabled';
-}
-
 // Normalize swap free
 function normalizeSwapFree(swapFree: string): string {
   if (!swapFree) return 'Tidak';
@@ -134,7 +124,8 @@ async function importPlatforms() {
         const serverName = row['Server Name']?.trim() || '';
         const accountType = row['Account Type']?.trim() || null;
         const clientGroupName = row['Client Group Name']?.trim() || null;
-        const status = normalizeStatus(row['Status']);
+        const statusRaw = (row['Status'] ?? '').trim();
+        const status = statusRaw || 'Enabled';
         const currency = row['Currency']?.trim() || 'USD';
         const leverage = row['Leverage']?.trim() || null;
         const swapFree = normalizeSwapFree(row['Swap Free']);
