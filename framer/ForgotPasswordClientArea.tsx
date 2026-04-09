@@ -14,6 +14,15 @@ function formatOtpCooldown(seconds: number): string {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
+/** National mobile digits only (strip 0062 / 62 / leading 0). Input boleh 0813…, 813…, 0062…, 62813…; ke API selalu 62 + nasional. */
+function stripIndonesiaNationalMobileDigits(input: string): string {
+    let d = input.replaceAll(/\D/g, "")
+    while (d.startsWith("0062")) d = d.slice(4)
+    while (d.startsWith("62")) d = d.slice(2)
+    while (d.startsWith("0")) d = d.slice(1)
+    return d
+}
+
 interface SendOtpResponse {
     error?: string
     message?: string
@@ -109,8 +118,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         setOtpResendSecondsLeft(OTP_RESEND_COOLDOWN_SEC)
     }, [step])
 
-    const otpCooldownActive =
-        step === "otp" && otpResendSecondsLeft > 0
+    const otpCooldownActive = step === "otp" && otpResendSecondsLeft > 0
     React.useEffect(() => {
         if (!otpCooldownActive) return
         const id = globalThis.setInterval(() => {
@@ -134,12 +142,12 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
     }
 
     const validatePhone = (phoneValue: string): boolean => {
-        const normalizedPhone = phoneValue.replaceAll(/\D/g, "")
-        if (!normalizedPhone) {
+        const national = stripIndonesiaNationalMobileDigits(phoneValue)
+        if (!national) {
             setPhoneError("Nomor HP diperlukan")
             return false
         }
-        if (normalizedPhone.length < 9 || normalizedPhone.length > 14) {
+        if (national.length < 9 || national.length > 13) {
             setPhoneError("Nomor HP tidak valid")
             return false
         }
@@ -170,13 +178,11 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         return true
     }
 
+    /** Salesforce: selalu "62" + digit nasional (tanpa 00 di depan). */
     const normalizePhoneForApi = (phoneValue: string): string => {
-        const digits = phoneValue.replaceAll(/\D/g, "")
-        if (!digits) return ""
-        if (digits.startsWith("62")) return digits
-        if (digits.startsWith("0")) return `62${digits.slice(1)}`
-        if (digits.startsWith("8")) return `62${digits}`
-        return digits
+        const national = stripIndonesiaNationalMobileDigits(phoneValue)
+        if (!national) return ""
+        return `62${national}`
     }
 
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -774,37 +780,195 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             )}
                                         </div>
                                         <div>
-                                            <input
-                                                type="tel"
-                                                id="forgot-phone"
-                                                name="phone"
-                                                inputMode="numeric"
-                                                value={phone}
-                                                onChange={(e) => {
-                                                    setPhone(
-                                                        e.target.value
-                                                            .replaceAll(
-                                                                /\s+/g,
-                                                                ""
-                                                            )
-                                                            .slice(0, 16)
-                                                    )
-                                                    setPhoneError("")
-                                                    setError("")
-                                                }}
-                                                onBlur={() =>
-                                                    validatePhone(phone)
-                                                }
-                                                placeholder="Nomor HP"
-                                                autoComplete="tel"
-                                                className="forgot-input"
+                                            {/* <label
+                                                htmlFor="forgot-phone"
                                                 style={{
-                                                    ...inputBase,
+                                                    display: "block",
+                                                    fontSize: "13px",
+                                                    color: "#444444",
+                                                    marginBottom: 6,
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                Nomor WhatsApp / HP{" "}
+                                                <span
+                                                    style={{
+                                                        fontWeight: 400,
+                                                        color: "#666666",
+                                                    }}
+                                                >
+                                                    (sesuai data terdaftar)
+                                                </span>
+                                            </label> */}
+                                            <div
+                                                className="forgot-phone-combo"
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "stretch",
+                                                    width: "100%",
+                                                    borderRadius: "70px",
+                                                    overflow: "hidden",
                                                     border: phoneError
                                                         ? "1px solid #ef4444"
                                                         : "1px solid #ffffff",
+                                                    backgroundColor: "#ffffff",
                                                 }}
-                                            />
+                                            >
+                                                <span
+                                                    aria-hidden
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        paddingLeft: "16px",
+                                                        paddingRight: "12px",
+                                                        backgroundColor:
+                                                            "#f3f4f6",
+                                                        color: "#24252c",
+                                                        fontSize: "14px",
+                                                        fontWeight: 600,
+                                                        borderRight:
+                                                            "1px solid #e5e7eb",
+                                                    }}
+                                                >
+                                                    <svg
+                                                        width={22}
+                                                        height={15}
+                                                        viewBox="0 0 22 15"
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            borderRadius: 2,
+                                                            boxShadow:
+                                                                "0 0 0 1px rgba(0,0,0,0.12)",
+                                                        }}
+                                                    >
+                                                        <rect
+                                                            width="22"
+                                                            height="7.5"
+                                                            fill="#E7000B"
+                                                        />
+                                                        <rect
+                                                            y="7.5"
+                                                            width="22"
+                                                            height="7.5"
+                                                            fill="#FFFFFF"
+                                                        />
+                                                    </svg>
+                                                    +62
+                                                </span>
+                                                <input
+                                                    type="tel"
+                                                    id="forgot-phone"
+                                                    name="phone"
+                                                    inputMode="numeric"
+                                                    value={phone}
+                                                    onChange={(e) => {
+                                                        const national =
+                                                            stripIndonesiaNationalMobileDigits(
+                                                                e.target.value
+                                                            )
+                                                        setPhone(
+                                                            national.slice(
+                                                                0,
+                                                                13
+                                                            )
+                                                        )
+                                                        setPhoneError("")
+                                                        setError("")
+                                                    }}
+                                                    onBlur={() =>
+                                                        validatePhone(phone)
+                                                    }
+                                                    placeholder="813xxxxxxxxx"
+                                                    autoComplete="tel-national"
+                                                    aria-label="Nomor seluler tanpa 62 (kode negara di kiri)"
+                                                    className="forgot-input forgot-phone-national"
+                                                    style={{
+                                                        ...inputBase,
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        border: "none",
+                                                        borderRadius: 0,
+                                                    }}
+                                                />
+                                            </div>
+                                            {/* <p
+                                                style={{
+                                                    fontSize: "12px",
+                                                    color: "#666666",
+                                                    margin: "6px 0 0 8px",
+                                                    lineHeight: 1.45,
+                                                }}
+                                            >
+                                                Isi hanya nomor setelah{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    62
+                                                </span>
+                                                —prefix{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    +62
+                                                </span>{" "}
+                                                sudah di kiri. Anda boleh ketik
+                                                atau tempel{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    0813…
+                                                </span>
+                                                ,{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    813…
+                                                </span>
+                                                ,{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    0062813…
+                                                </span>
+                                                , dll.; ke Salesforce selalu
+                                                dikirim{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    62
+                                                </span>
+                                                + minimal 9 digit nasional
+                                                (mis. awalan operator{" "}
+                                                <span
+                                                    style={{
+                                                        fontVariantNumeric:
+                                                            "tabular-nums",
+                                                    }}
+                                                >
+                                                    813
+                                                </span>
+                                                ).
+                                            </p> */}
                                             {phoneError && (
                                                 <p
                                                     style={{
@@ -1024,7 +1188,8 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                         </span>
                                                     ) : null}
                                                     {!isResendingOtp &&
-                                                    otpResendSecondsLeft <= 0 ? (
+                                                    otpResendSecondsLeft <=
+                                                        0 ? (
                                                         <button
                                                             type="button"
                                                             onClick={

@@ -18,6 +18,9 @@ interface LoginSuccessResponse {
 const LOGIN_ERROR_FALLBACK_NO_MESSAGE =
     "Akun ini tidak terdaftar. Silahkan lanjutkan pembuatan akun"
 
+const WRONG_PASSWORD_INFO_MESSAGE =
+    "Demi keamanan dan sesuai kebijakan privasi kami, kami menganjurkan Anda untuk mengganti kata sandi secara berkala. Silakan ubah kata sandi Anda."
+
 type LoginClientAreaProps = {
     loginApiUrl?: string
     accentColor?: string
@@ -58,7 +61,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
     const [loginError, setLoginError] = React.useState("")
     const [showPasswordTooltip, setShowPasswordTooltip] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
-    const [showResetPasswordOption, setShowResetPasswordOption] =
+    const [showWrongPasswordInfo, setShowWrongPasswordInfo] =
         React.useState(false)
 
     React.useEffect(() => {
@@ -125,12 +128,14 @@ function LoginClientArea(props: LoginClientAreaProps) {
     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEmail(e.target.value)
         setLoginError("")
+        setShowWrongPasswordInfo(false)
         if (emailError) validateEmail(e.target.value)
     }
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value)
         setLoginError("")
+        setShowWrongPasswordInfo(false)
         if (passwordError) validatePassword(e.target.value)
     }
 
@@ -166,6 +171,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
         if (!isEmailValid || !isPasswordValid) return
 
         setLoginError("")
+        setShowWrongPasswordInfo(false)
         setIsSubmitting(true)
 
         try {
@@ -183,26 +189,23 @@ function LoginClientArea(props: LoginClientAreaProps) {
             const data: LoginSuccessResponse = await response.json()
 
             if (!response.ok) {
-                const wrongPasswordMessage =
-                    "Demi keamanan akun Anda, silakan lakukan reset kata sandi untuk melanjutkan."
                 const isWrongPassword =
                     data.errorType === "wrong_password" && data.email
                 const serverError = (data.error ?? "").trim()
 
-                setLoginError(
-                    isWrongPassword
-                        ? wrongPasswordMessage
-                        : serverError || LOGIN_ERROR_FALLBACK_NO_MESSAGE
-                )
                 if (isWrongPassword) {
-                    setShowResetPasswordOption(true)
+                    setLoginError("")
+                    setShowWrongPasswordInfo(true)
                 } else {
-                    setShowResetPasswordOption(false)
+                    setShowWrongPasswordInfo(false)
+                    setLoginError(
+                        serverError || LOGIN_ERROR_FALLBACK_NO_MESSAGE
+                    )
                 }
                 return
             }
 
-            setShowResetPasswordOption(false)
+            setShowWrongPasswordInfo(false)
 
             if (data.token && typeof window !== "undefined") {
                 localStorage.setItem("token", data.token)
@@ -217,6 +220,7 @@ function LoginClientArea(props: LoginClientAreaProps) {
             window.location.href = accountsUrl
         } catch (error) {
             console.error("Login error:", error)
+            setShowWrongPasswordInfo(false)
             setLoginError("Terjadi kesalahan saat login. Silakan coba lagi.")
         } finally {
             setIsSubmitting(false)
@@ -781,6 +785,140 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                         )}
                                     </div>
 
+                                    {showWrongPasswordInfo && (
+                                        <div
+                                            role="status"
+                                            aria-live="polite"
+                                            style={{
+                                                marginBottom: 8,
+                                                padding: "16px 18px",
+                                                borderRadius: 12,
+                                                backgroundColor: "#f0f9ff",
+                                                border: "1px solid #bae6fd",
+                                                position: "relative",
+                                            }}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowWrongPasswordInfo(
+                                                        false
+                                                    )
+                                                }
+                                                aria-label="Tutup informasi ganti kata sandi"
+                                                style={{
+                                                    position: "absolute",
+                                                    top: 8,
+                                                    right: 8,
+                                                    border: "none",
+                                                    background: "transparent",
+                                                    color: "#075985",
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 9999,
+                                                    cursor: "pointer",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    fontSize: 18,
+                                                    lineHeight: 1,
+                                                    padding: 0,
+                                                }}
+                                            >
+                                                ×
+                                            </button>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    gap: 12,
+                                                    alignItems: "flex-start",
+                                                    paddingRight: 24,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        display: "flex",
+                                                        marginTop: 2,
+                                                    }}
+                                                    aria-hidden
+                                                >
+                                                    <svg
+                                                        width={22}
+                                                        height={22}
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                    >
+                                                        <path
+                                                            d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"
+                                                            fill="#e0f2fe"
+                                                            stroke="#0284c7"
+                                                            strokeWidth={1.5}
+                                                        />
+                                                        <path
+                                                            d="M12 16v-5"
+                                                            stroke="#0369a1"
+                                                            strokeWidth={1.75}
+                                                            strokeLinecap="round"
+                                                        />
+                                                        <circle
+                                                            cx={12}
+                                                            cy={8.5}
+                                                            r={1.1}
+                                                            fill="#0369a1"
+                                                        />
+                                                    </svg>
+                                                </span>
+                                                <p
+                                                    style={{
+                                                        margin: 0,
+                                                        fontSize: "13px",
+                                                        lineHeight: 1.55,
+                                                        color: "#0c4a6e",
+                                                    }}
+                                                >
+                                                    {WRONG_PASSWORD_INFO_MESSAGE}
+                                                </p>
+                                            </div>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    justifyContent: "center",
+                                                    marginTop: 16,
+                                                }}
+                                            >
+                                                <a
+                                                    href={buildForgotPasswordUrl(
+                                                        email
+                                                    )}
+                                                    onClick={
+                                                        handleForgotPasswordClick
+                                                    }
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        justifyContent:
+                                                            "center",
+                                                        padding:
+                                                            "12px 28px 10px",
+                                                        borderRadius: 9999,
+                                                        backgroundColor:
+                                                            "#2b2c24",
+                                                        color: "#ffffff",
+                                                        fontSize: "14px",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                        boxShadow:
+                                                            "0 1px 2px rgba(0,0,0,0.06)",
+                                                    }}
+                                                >
+                                                    Ubah kata sandi
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {loginError && (
                                         <div style={{ marginBottom: 8 }}>
                                             <p
@@ -793,26 +931,6 @@ function LoginClientArea(props: LoginClientAreaProps) {
                                             >
                                                 {loginError}
                                             </p>
-                                            {showResetPasswordOption && (
-                                                <div
-                                                    style={{
-                                                        marginTop: 8,
-                                                        paddingLeft: 8,
-                                                    }}
-                                                >
-                                                    <a
-                                                        href={buildForgotPasswordUrl(
-                                                            email
-                                                        )}
-                                                        onClick={
-                                                            handleForgotPasswordClick
-                                                        }
-                                                        style={linkStyle}
-                                                    >
-                                                        Reset password Anda
-                                                    </a>
-                                                </div>
-                                            )}
                                         </div>
                                     )}
 
