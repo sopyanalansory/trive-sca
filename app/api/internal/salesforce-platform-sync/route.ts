@@ -42,27 +42,29 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 function statusForError(error: string): number {
-  switch (error) {
-    case "VALIDATION":
-      return 400;
-    case "USER_NOT_FOUND":
-      return 404;
-    case "PLATFORM_NOT_IN_RESPONSE":
-      return 404;
-    case "ROW_INCOMPLETE":
-      return 422;
-    case "SALESFORCE_ERROR":
-      return 502;
-    default:
-      return 500;
-  }
+  // Legacy mapping (kept for reference):
+  // switch (error) {
+  //   case "VALIDATION":
+  //     return 400;
+  //   case "USER_NOT_FOUND":
+  //     return 404;
+  //   case "PLATFORM_NOT_IN_RESPONSE":
+  //     return 404;
+  //   case "ROW_INCOMPLETE":
+  //     return 422;
+  //   case "SALESFORCE_ERROR":
+  //     return 502;
+  //   default:
+  //     return 500;
+  // }
+  return 200;
 }
 
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 }
+      { status: 200 } // was: 401
     );
   }
 
@@ -73,14 +75,14 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json(
         { success: false, error: "Invalid JSON body" },
-        { status: 400 }
+        { status: 200 } // was: 400
       );
     }
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       return NextResponse.json(
         { success: false, error: "Body must be a JSON object" },
-        { status: 400 }
+        { status: 200 } // was: 400
       );
     }
 
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
           error: result.error,
           message: result.message,
         },
-        { status: statusForError(result.error) }
+        { status: statusForError(result.error) } // legacy: statusForError returned non-200 per error type
       );
     }
 
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
         error: "INTERNAL_ERROR",
         message: "An error occurred while syncing the platform",
       },
-      { status: 500 }
+      { status: 200 } // was: 500
     );
   }
 }
