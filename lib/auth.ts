@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
+const PASSWORD_RESET_JWT_EXPIRES_IN = '30m';
 
 export type JwtPayload = {
   userId: number;
@@ -36,12 +37,39 @@ export function generateToken(
   );
 }
 
-// Verify JWT token
+// Verify JWT token (session); rejects special-purpose JWTs like password_reset.
 export function verifyToken(token: string): JwtPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    return decoded;
-  } catch (error) {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (typeof decoded !== 'object' || decoded === null) return null;
+    if ('purpose' in decoded) return null;
+    return decoded as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
+/** Short-lived token after WhatsApp OTP is verified (forgot-password step 2). */
+export function generatePasswordResetToken(email: string): string {
+  const normalized = email.toLowerCase().trim();
+  return jwt.sign(
+    { purpose: 'password_reset', email: normalized },
+    JWT_SECRET,
+    { expiresIn: PASSWORD_RESET_JWT_EXPIRES_IN }
+  );
+}
+
+export function verifyPasswordResetToken(token: string): { email: string } | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & {
+      purpose?: string;
+      email?: string;
+    };
+    if (decoded.purpose !== 'password_reset' || typeof decoded.email !== 'string') {
+      return null;
+    }
+    return { email: decoded.email.toLowerCase().trim() };
+  } catch {
     return null;
   }
 }

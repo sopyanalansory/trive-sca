@@ -13,6 +13,7 @@ vi.mock("@/lib/db", () => ({
 
 import { POST } from "@/app/api/auth/reset-password/route";
 import pool from "@/lib/db";
+import { generatePasswordResetToken } from "@/lib/auth";
 
 function validBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -120,5 +121,39 @@ describe("POST /api/auth/reset-password", () => {
     const json = await res.json();
     expect(json.message).toMatch(/berhasil direset/i);
     expect(pool.query).toHaveBeenCalled();
+  });
+
+  it("returns 200 when resetToken is valid (no Verihubs call)", async () => {
+    const token = generatePasswordResetToken("user@test.com");
+    vi.mocked(pool.query)
+      .mockResolvedValueOnce({
+        rows: [{ id: 1, email: "user@test.com" }],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    const res = await POST(
+      postJson("/api/auth/reset-password", {
+        email: "user@test.com",
+        newPassword: "Aa1bbbbbb",
+        resetToken: token,
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(fetchMock).not.toHaveBeenCalled();
+    const json = await res.json();
+    expect(json.message).toMatch(/berhasil direset/i);
+  });
+
+  it("returns 401 when resetToken invalid", async () => {
+    vi.mocked(pool.query).mockReset();
+
+    const res = await POST(
+      postJson("/api/auth/reset-password", {
+        newPassword: "Aa1bbbbbb",
+        resetToken: "not-a-real-jwt",
+      })
+    );
+    expect(res.status).toBe(401);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
