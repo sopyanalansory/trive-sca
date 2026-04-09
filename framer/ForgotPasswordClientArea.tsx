@@ -67,7 +67,9 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         fullViewport = false,
     } = props
 
-    const [step, setStep] = React.useState<"request" | "otp">("request")
+    const [step, setStep] = React.useState<"request" | "otp" | "reset">(
+        "request"
+    )
     const [email, setEmail] = React.useState("")
     const [phone, setPhone] = React.useState("")
     const [otp, setOtp] = React.useState("")
@@ -81,6 +83,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
     const [success, setSuccess] = React.useState("")
     const [otpSentMessage, setOtpSentMessage] = React.useState("")
     const [emailError, setEmailError] = React.useState("")
+    const [isEmailLocked, setIsEmailLocked] = React.useState(false)
     const [phoneError, setPhoneError] = React.useState("")
     const [passwordError, setPasswordError] = React.useState("")
     const [otpError, setOtpError] = React.useState("")
@@ -98,6 +101,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
             ""
         const resolvedEmail = (emailFromQuery || emailFromStorage).trim()
         setEmail(resolvedEmail)
+        setIsEmailLocked(Boolean(resolvedEmail))
     }, [])
 
     React.useEffect(() => {
@@ -177,6 +181,12 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         setPasswordError("")
         return true
     }
+
+    const isEmailFormatValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    const phoneNationalDigits = stripIndonesiaNationalMobileDigits(phone)
+    const isPhoneFormatValid =
+        phoneNationalDigits.length >= 9 && phoneNationalDigits.length <= 13
+    const isRequestFormValid = isEmailFormatValid && isPhoneFormatValid
 
     /** Salesforce: selalu "62" + digit nasional (tanpa 00 di depan). */
     const normalizePhoneForApi = (phoneValue: string): string => {
@@ -325,6 +335,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
 
         if (!otp.trim()) {
             setOtpError("Kode OTP diperlukan")
+            setStep("otp")
             return
         }
         setOtpError("")
@@ -380,6 +391,22 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         }
     }
 
+    const handleContinueToResetPassword = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!otp.trim()) {
+            setOtpError("Kode OTP diperlukan")
+            return
+        }
+        if (otp.trim().length !== 4) {
+            setOtpError("Kode OTP harus 4 digit")
+            return
+        }
+        setOtpError("")
+        setError("")
+        setSuccess("")
+        setStep("reset")
+    }
+
     const inputBase: React.CSSProperties = {
         width: "100%",
         backgroundColor: "#ffffff",
@@ -429,6 +456,10 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
         cursor: "pointer",
         fontFamily: "inherit",
     }
+
+    let formTitle = "Reset Kata Sandi"
+    if (step === "request") formTitle = "Lupa Kata Sandi"
+    if (step === "otp") formTitle = "Verifikasi OTP"
 
     const rootLayout: React.CSSProperties = fullViewport
         ? {
@@ -716,12 +747,10 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                         margin: "0 0 24px 0",
                                     }}
                                 >
-                                    {step === "request"
-                                        ? "Lupa Kata Sandi"
-                                        : "Reset Kata Sandi"}
+                                    {formTitle}
                                 </h2>
 
-                                {step === "request" ? (
+                                {step === "request" && (
                                     <form
                                         onSubmit={handleSendOtp}
                                         style={{
@@ -730,7 +759,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             gap: "16px",
                                         }}
                                     >
-                                        {/* <p
+                                        <p
                                             className="forgot-form-copy"
                                             style={{
                                                 fontSize: "14px",
@@ -738,17 +767,16 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 margin: "0 0 4px 0",
                                             }}
                                         >
-                                            Jika email Anda tersimpan dari halaman
-                                            login, kolom email akan terisi otomatis.
-                                            Anda juga bisa isi manual. Lalu masukkan
-                                            nomor HP untuk kirim OTP via WhatsApp.
-                                        </p> */}
+                                            Tolong masukin no hp untuk
+                                            melanjutkan lupa kata sandi.
+                                        </p>
                                         <div>
                                             <input
                                                 type="email"
                                                 id="forgot-email"
                                                 name="email"
                                                 value={email}
+                                                readOnly={isEmailLocked}
                                                 onChange={(e) => {
                                                     setEmail(e.target.value)
                                                     setEmailError("")
@@ -761,7 +789,9 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 autoComplete="email"
                                                 className="forgot-input"
                                                 style={{
-                                                    ...inputBase,
+                                                    ...(isEmailLocked
+                                                        ? inputDisabled
+                                                        : inputBase),
                                                     border: emailError
                                                         ? "1px solid #ef4444"
                                                         : "1px solid #ffffff",
@@ -880,7 +910,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     onBlur={() =>
                                                         validatePhone(phone)
                                                     }
-                                                    placeholder="813xxxxxxxxx"
+                                                    placeholder="8xxxxxxxxxxx"
                                                     autoComplete="tel-national"
                                                     aria-label="Nomor seluler tanpa 62 (kode negara di kiri)"
                                                     className="forgot-input forgot-phone-national"
@@ -1021,25 +1051,33 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                         >
                                             <button
                                                 type="submit"
-                                                disabled={isSendingOtp}
+                                                disabled={
+                                                    isSendingOtp ||
+                                                    !isRequestFormValid
+                                                }
                                                 className="forgot-submit-btn"
                                                 style={{
                                                     ...submitBtnBase,
-                                                    cursor: isSendingOtp
-                                                        ? "not-allowed"
-                                                        : "pointer",
+                                                    cursor:
+                                                        isSendingOtp ||
+                                                        !isRequestFormValid
+                                                            ? "not-allowed"
+                                                            : "pointer",
                                                     backgroundColor:
-                                                        isSendingOtp
+                                                        isSendingOtp ||
+                                                        !isRequestFormValid
                                                             ? "#d1d5db"
                                                             : "#2b2c24",
-                                                    color: isSendingOtp
-                                                        ? "#9ca3af"
-                                                        : "#ffffff",
+                                                    color:
+                                                        isSendingOtp ||
+                                                        !isRequestFormValid
+                                                            ? "#9ca3af"
+                                                            : "#ffffff",
                                                 }}
                                             >
                                                 {isSendingOtp
-                                                    ? "Mengirim..."
-                                                    : "Submit"}
+                                                    ? "Memverifikasi..."
+                                                    : "Lanjutkan"}
                                             </button>
                                         </div>
 
@@ -1059,9 +1097,10 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             </a>
                                         </div>
                                     </form>
-                                ) : (
+                                )}
+                                {step === "otp" && (
                                     <form
-                                        onSubmit={handleResetPassword}
+                                        onSubmit={handleContinueToResetPassword}
                                         style={{
                                             display: "flex",
                                             flexDirection: "column",
@@ -1077,7 +1116,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             }}
                                         >
                                             Masukkan kode OTP yang dikirim ke
-                                            WhatsApp Anda dan password baru.
+                                            WhatsApp Anda.
                                         </p>
                                         <div>
                                             <input
@@ -1088,17 +1127,80 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                 className="forgot-input"
                                                 style={inputDisabled}
                                             />
-                                            {emailError ? (
-                                                <p
+                                        </div>
+                                        <div>
+                                            <div
+                                                className="forgot-phone-combo"
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "stretch",
+                                                    width: "100%",
+                                                    borderRadius: "70px",
+                                                    overflow: "hidden",
+                                                    border: "1px solid #d1d5db",
+                                                    backgroundColor: "#f3f4f6",
+                                                }}
+                                            >
+                                                <span
+                                                    aria-hidden
                                                     style={{
-                                                        color: "#ef4444",
-                                                        fontSize: "12px",
-                                                        margin: "4px 0 0 8px",
+                                                        flexShrink: 0,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        paddingLeft: "16px",
+                                                        paddingRight: "12px",
+                                                        backgroundColor:
+                                                            "#e5e7eb",
+                                                        color: "#24252c",
+                                                        fontSize: "14px",
+                                                        fontWeight: 600,
+                                                        borderRight:
+                                                            "1px solid #d1d5db",
                                                     }}
                                                 >
-                                                    {emailError}
-                                                </p>
-                                            ) : null}
+                                                    <svg
+                                                        width={22}
+                                                        height={15}
+                                                        viewBox="0 0 22 15"
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            borderRadius: 2,
+                                                            boxShadow:
+                                                                "0 0 0 1px rgba(0,0,0,0.12)",
+                                                        }}
+                                                    >
+                                                        <rect
+                                                            width="22"
+                                                            height="7.5"
+                                                            fill="#E7000B"
+                                                        />
+                                                        <rect
+                                                            y="7.5"
+                                                            width="22"
+                                                            height="7.5"
+                                                            fill="#FFFFFF"
+                                                        />
+                                                    </svg>
+                                                    +62
+                                                </span>
+                                                <input
+                                                    type="tel"
+                                                    value={phoneNationalDigits}
+                                                    disabled
+                                                    readOnly
+                                                    className="forgot-input"
+                                                    style={{
+                                                        ...inputDisabled,
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        border: "none",
+                                                        borderRadius: 0,
+                                                        backgroundColor:
+                                                            "#f3f4f6",
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <div
@@ -1121,7 +1223,7 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                                     /\D/g,
                                                                     ""
                                                                 )
-                                                                .slice(0, 5)
+                                                                .slice(0, 4)
                                                         )
                                                         setOtpError("")
                                                         setError("")
@@ -1264,6 +1366,177 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                                     </button>
                                                 </div>
                                             )}
+                                        </div>
+                                        {error && (
+                                            <div style={{ marginBottom: 4 }}>
+                                                <p
+                                                    style={{
+                                                        color: "#ef4444",
+                                                        fontSize: "14px",
+                                                        paddingLeft: 8,
+                                                        margin: 0,
+                                                    }}
+                                                >
+                                                    {error}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                paddingTop: 8,
+                                            }}
+                                        >
+                                            <button
+                                                type="submit"
+                                                className="forgot-submit-btn"
+                                                style={submitBtnBase}
+                                            >
+                                                Lanjut ke reset kata sandi
+                                            </button>
+                                        </div>
+                                        <div
+                                            style={{
+                                                textAlign: "center",
+                                                fontSize: "14px",
+                                                color: "#666666",
+                                                paddingTop: 4,
+                                            }}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setStep("request")
+                                                    setOtp("")
+                                                    setNewPassword("")
+                                                    setConfirmPassword("")
+                                                    setError("")
+                                                    setSuccess("")
+                                                    setOtpSentMessage("")
+                                                    setOtpError("")
+                                                    setPasswordError("")
+                                                }}
+                                                style={linkStyle}
+                                            >
+                                                Kembali
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                                {step === "reset" && (
+                                    <form
+                                        onSubmit={handleResetPassword}
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "16px",
+                                        }}
+                                    >
+                                        <p
+                                            className="forgot-form-copy"
+                                            style={{
+                                                fontSize: "14px",
+                                                color: "#666666",
+                                                margin: "0 0 4px 0",
+                                            }}
+                                        >
+                                            Masukkan password baru Anda.
+                                        </p>
+                                        <div>
+                                            <input
+                                                type="email"
+                                                value={email}
+                                                disabled
+                                                readOnly
+                                                className="forgot-input"
+                                                style={inputDisabled}
+                                            />
+                                            {emailError ? (
+                                                <p
+                                                    style={{
+                                                        color: "#ef4444",
+                                                        fontSize: "12px",
+                                                        margin: "4px 0 0 8px",
+                                                    }}
+                                                >
+                                                    {emailError}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                        <div>
+                                            <div
+                                                className="forgot-phone-combo"
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "stretch",
+                                                    width: "100%",
+                                                    borderRadius: "70px",
+                                                    overflow: "hidden",
+                                                    border: "1px solid #d1d5db",
+                                                    backgroundColor: "#f3f4f6",
+                                                }}
+                                            >
+                                                <span
+                                                    aria-hidden
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        paddingLeft: "16px",
+                                                        paddingRight: "12px",
+                                                        backgroundColor:
+                                                            "#e5e7eb",
+                                                        color: "#24252c",
+                                                        fontSize: "14px",
+                                                        fontWeight: 600,
+                                                        borderRight:
+                                                            "1px solid #d1d5db",
+                                                    }}
+                                                >
+                                                    <svg
+                                                        width={22}
+                                                        height={15}
+                                                        viewBox="0 0 22 15"
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            borderRadius: 2,
+                                                            boxShadow:
+                                                                "0 0 0 1px rgba(0,0,0,0.12)",
+                                                        }}
+                                                    >
+                                                        <rect
+                                                            width="22"
+                                                            height="7.5"
+                                                            fill="#E7000B"
+                                                        />
+                                                        <rect
+                                                            y="7.5"
+                                                            width="22"
+                                                            height="7.5"
+                                                            fill="#FFFFFF"
+                                                        />
+                                                    </svg>
+                                                    +62
+                                                </span>
+                                                <input
+                                                    type="tel"
+                                                    value={phoneNationalDigits}
+                                                    disabled
+                                                    readOnly
+                                                    className="forgot-input"
+                                                    style={{
+                                                        ...inputDisabled,
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        border: "none",
+                                                        borderRadius: 0,
+                                                        backgroundColor:
+                                                            "#f3f4f6",
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <div
@@ -1546,16 +1819,11 @@ function ForgotPasswordClientArea(props: ForgotPasswordClientAreaProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    setStep("request")
-                                                    setOtp("")
-                                                    setPhone("")
+                                                    setStep("otp")
                                                     setNewPassword("")
                                                     setConfirmPassword("")
                                                     setError("")
                                                     setSuccess("")
-                                                    setOtpSentMessage("")
-                                                    setOtpError("")
-                                                    setPhoneError("")
                                                     setPasswordError("")
                                                 }}
                                                 style={linkStyle}
