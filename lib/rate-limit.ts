@@ -63,6 +63,18 @@ const limiterCache: {
   otpVerifyEmail?: Ratelimit | null;
 } = {};
 
+function getOtpWindowMinutes(): number {
+  return parsePositiveInt(process.env.RATE_LIMIT_OTP_WINDOW_MINUTES, 2);
+}
+
+function getOtpWindowDuration(): string {
+  return `${getOtpWindowMinutes()} m`;
+}
+
+function getOtpWindowMs(): number {
+  return getOtpWindowMinutes() * 60_000;
+}
+
 function getApiIpRatelimit(): Ratelimit | null {
   if (limiterCache.apiIp !== undefined) return limiterCache.apiIp;
   const r = getRedis();
@@ -89,7 +101,7 @@ function getOtpSendMsisdnRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_SEND_PER_MSISDN, 5);
   limiterCache.otpSendMsisdn = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, "15 m"),
+    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
     prefix: "trive:rl:otp-send-msisdn",
   });
   return limiterCache.otpSendMsisdn;
@@ -105,7 +117,7 @@ function getOtpSendEmailRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_SEND_PER_EMAIL, 5);
   limiterCache.otpSendEmail = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, "15 m"),
+    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
     prefix: "trive:rl:otp-send-email",
   });
   return limiterCache.otpSendEmail;
@@ -121,7 +133,7 @@ function getOtpVerifyMsisdnRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_VERIFY_PER_MSISDN, 20);
   limiterCache.otpVerifyMsisdn = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, "15 m"),
+    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
     prefix: "trive:rl:otp-verify-msisdn",
   });
   return limiterCache.otpVerifyMsisdn;
@@ -137,7 +149,7 @@ function getOtpVerifyEmailRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_VERIFY_PER_EMAIL, 20);
   limiterCache.otpVerifyEmail = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, "15 m"),
+    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
     prefix: "trive:rl:otp-verify-email",
   });
   return limiterCache.otpVerifyEmail;
@@ -220,7 +232,7 @@ export async function enforceOtpSendByMsisdn(
     limiter,
     "otp-send-msisdn",
     max,
-    15 * 60_000,
+    getOtpWindowMs(),
     id
   );
   if (success) return null;
@@ -239,7 +251,7 @@ export async function enforceOtpSendByEmail(
     limiter,
     "otp-send-email",
     max,
-    15 * 60_000,
+    getOtpWindowMs(),
     id
   );
   if (success) return null;
@@ -258,7 +270,7 @@ export async function enforceOtpVerifyByMsisdn(
     limiter,
     "otp-verify-msisdn",
     max,
-    15 * 60_000,
+    getOtpWindowMs(),
     id
   );
   if (success) return null;
@@ -277,7 +289,7 @@ export async function enforceOtpVerifyByEmail(
     limiter,
     "otp-verify-email",
     max,
-    15 * 60_000,
+    getOtpWindowMs(),
     id
   );
   if (success) return null;
