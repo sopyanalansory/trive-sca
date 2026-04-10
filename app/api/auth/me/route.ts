@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(
       `SELECT id, fullname, email, phone, country_code, 
        place_of_birth,
+       client_id, contact_id, is_red_flag, lead_id, account_id,
        city, postal_code, street_name, house_number,
        profile_photo, profile_photo_mime_type
        FROM users WHERE id = $1`,
@@ -59,6 +60,12 @@ export async function GET(request: NextRequest) {
           phone: user.phone,
           countryCode: user.country_code,
           placeOfBirth: user.place_of_birth || '',
+          clientId: user.client_id || null,
+          contactId: user.contact_id || null,
+          isRedFlag:
+            typeof user.is_red_flag === 'boolean' ? user.is_red_flag : null,
+          leadId: user.lead_id || null,
+          accountId: user.account_id || null,
           city: user.city || '',
           postalCode: user.postal_code || '',
           streetName: user.street_name || '',
@@ -223,6 +230,7 @@ export async function PUT(request: NextRequest) {
       WHERE id = $${paramIndex}
       RETURNING id, fullname, email, phone, country_code, 
                 place_of_birth,
+                client_id, contact_id, is_red_flag, lead_id, account_id,
                 city, postal_code, street_name, house_number,
                 profile_photo, profile_photo_mime_type
     `;
@@ -252,6 +260,12 @@ export async function PUT(request: NextRequest) {
           phone: user.phone,
           countryCode: user.country_code,
           placeOfBirth: user.place_of_birth || '',
+          clientId: user.client_id || null,
+          contactId: user.contact_id || null,
+          isRedFlag:
+            typeof user.is_red_flag === 'boolean' ? user.is_red_flag : null,
+          leadId: user.lead_id || null,
+          accountId: user.account_id || null,
           city: user.city || '',
           postalCode: user.postal_code || '',
           streetName: user.street_name || '',

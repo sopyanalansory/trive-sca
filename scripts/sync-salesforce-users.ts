@@ -413,6 +413,8 @@ async function main() {
   let notFound = 0;
   let failed = 0;
   let rateLimited = 0;
+  const failedUsers: Array<{ id: number; email: string; phone: string; reason: string }> = [];
+  const notFoundUsers: Array<{ id: number; email: string; phone: string }> = [];
 
   for (const user of users) {
     try {
@@ -420,6 +422,15 @@ async function main() {
       const localPhoneDigits = digitsOnly(user.phone || "");
       if (!email || !localPhoneDigits) {
         failed += 1;
+        failedUsers.push({
+          id: user.id,
+          email: email || "(empty)",
+          phone: localPhoneDigits || "(empty)",
+          reason: "missing email or phone",
+        });
+        console.error(
+          `[FAILED] userId=${user.id} email=${email || "(empty)"} phone=${localPhoneDigits || "(empty)"} reason=missing email or phone`
+        );
         continue;
       }
       const phoneMsisdn = toMsisdn(localPhoneDigits, "+62");
@@ -447,6 +458,12 @@ async function main() {
 
       if (!response.ok) {
         failed += 1;
+        failedUsers.push({
+          id: user.id,
+          email,
+          phone: phoneMsisdn,
+          reason: `HTTP ${response.status}`,
+        });
         console.error(`Failed user ${user.id} (${email}): HTTP ${response.status}`);
         continue;
       }
@@ -454,6 +471,10 @@ async function main() {
       const outputValues = pickRecordFoundOutputValues(parsed);
       if (!outputValues) {
         notFound += 1;
+        notFoundUsers.push({ id: user.id, email, phone: phoneMsisdn });
+        console.warn(
+          `[NOT_FOUND] userId=${user.id} email=${email} phone=${phoneMsisdn}`
+        );
         continue;
       }
 
@@ -465,7 +486,17 @@ async function main() {
       }
     } catch (error) {
       failed += 1;
+      const email = user.email?.trim().toLowerCase() || "(empty)";
+      const localPhoneDigits = digitsOnly(user.phone || "");
+      const phoneMsisdn = localPhoneDigits
+        ? toMsisdn(localPhoneDigits, "+62")
+        : "(empty)";
+      const reason = error instanceof Error ? error.message : "unknown error";
+      failedUsers.push({ id: user.id, email, phone: phoneMsisdn, reason });
       console.error(`Failed user ${user.id} (${user.email}):`, error);
+      console.error(
+        `[FAILED] userId=${user.id} email=${email} phone=${phoneMsisdn} reason=${reason}`
+      );
       if (delayMs > 0) {
         await sleep(delayMs);
       }
@@ -479,6 +510,20 @@ async function main() {
   console.log(`Failed: ${failed}`);
   console.log(`Hit rate limit/temporary unavailable: ${rateLimited}`);
   console.log(`Last processed user id: ${users.at(-1)?.id ?? resumeFromId}`);
+  if (notFoundUsers.length > 0) {
+    console.log("Not found details:");
+    for (const u of notFoundUsers) {
+      console.log(`- userId=${u.id} email=${u.email} phone=${u.phone}`);
+    }
+  }
+  if (failedUsers.length > 0) {
+    console.log("Failed details:");
+    for (const u of failedUsers) {
+      console.log(
+        `- userId=${u.id} email=${u.email} phone=${u.phone} reason=${u.reason}`
+      );
+    }
+  }
 }
 
 main()
