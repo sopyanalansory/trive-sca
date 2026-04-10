@@ -26,6 +26,7 @@
     "migrate-add-nickname-fix-rate": "tsx lib/run-add-nickname-fix-rate-migration.ts",
     "migrate-add-registration-date": "tsx lib/run-add-registration-date-migration.ts",
     "refresh-salesforce-token": "tsx scripts/refresh-salesforce-token.ts",
+    "sync-salesforce-users": "tsx scripts/sync-salesforce-users.ts",
     "setup-salesforce-cron": "tsx scripts/setup-salesforce-cron.ts",
     "generate-favicon": "node scripts/generate-favicon.js"
   },
