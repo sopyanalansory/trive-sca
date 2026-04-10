@@ -157,13 +157,15 @@ async function upsertSinglePlatformRow(
     (pickRowBoolean(row, ["IsLive__c"]) ? "Live" : null) ||
     (pickRowBoolean(row, ["IsDemo__c"]) ? "Demo" : null) ||
     "Live";
+  const salesforceCreatedAt =
+    pickSalesforceDate(row, ["CreatedDate__c", "CreatedDate"]) || null;
 
   await pool.query(
     `INSERT INTO platforms (
         platform_registration_id, user_id, account_id, login_number, server_name,
         account_type, client_group_name, status, currency, leverage, nickname,
-        fix_rate, swap_free, type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        fix_rate, swap_free, type, registration_date
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       ON CONFLICT (platform_registration_id) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         account_id = EXCLUDED.account_id,
@@ -178,6 +180,7 @@ async function upsertSinglePlatformRow(
         fix_rate = EXCLUDED.fix_rate,
         swap_free = EXCLUDED.swap_free,
         type = EXCLUDED.type,
+        registration_date = COALESCE(platforms.registration_date, EXCLUDED.registration_date),
         updated_at = CURRENT_TIMESTAMP`,
     [
       normalizeSalesforceId(platformRegistrationId),
@@ -194,6 +197,7 @@ async function upsertSinglePlatformRow(
       fixRate,
       swapFree,
       type,
+      salesforceCreatedAt,
     ]
   );
   return true;
@@ -400,6 +404,19 @@ function inferTypeFromClientGroupName(clientGroupName: string | null): string | 
     return "Demo";
   }
   return null;
+}
+
+function pickSalesforceDate(
+  row: Record<string, unknown>,
+  candidates: string[]
+): Date | null {
+  const raw = pickRowString(row, candidates);
+  if (!raw) return null;
+
+  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
 }
 
 function isPlatformish(obj: unknown): obj is Record<string, unknown> {

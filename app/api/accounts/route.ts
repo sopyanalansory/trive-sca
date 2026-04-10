@@ -6,6 +6,16 @@ import { fetchAndPersistPlatformsForUser } from '@/lib/salesforce-platforms';
 
 const log = apiLogger('accounts');
 
+function resolvePlatformName(
+  serverName: string | null | undefined,
+  clientGroupName: string | null | undefined
+): string {
+  const normalizedServer = (serverName || '').toUpperCase();
+  if (normalizedServer.includes('MT5')) return 'MetaTrader 5';
+  if (normalizedServer.includes('MT4')) return 'MetaTrader 4';
+  return clientGroupName || serverName?.split('-')[0] || '-';
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get token from Authorization header
@@ -41,7 +51,8 @@ export async function GET(request: NextRequest) {
         nickname,
         leverage,
         fix_rate,
-        type
+        type,
+        registration_date
       FROM platforms 
       WHERE user_id = $1
         AND LOWER(TRIM(COALESCE(status, ''))) IN ('enabled', 'read-only')
@@ -73,7 +84,8 @@ export async function GET(request: NextRequest) {
               nickname,
               leverage,
               fix_rate,
-              type
+              type,
+              registration_date
             FROM platforms 
             WHERE user_id = $1
               AND LOWER(TRIM(COALESCE(status, ''))) IN ('enabled', 'read-only')
@@ -102,7 +114,7 @@ export async function GET(request: NextRequest) {
       id: row.id,
       type: row.type || 'Demo',
       accountType: row.account_type || '-',
-      platform: row.client_group_name || row.server_name?.split('-')[0] || '-',
+      platform: resolvePlatformName(row.server_name, row.client_group_name),
       login: row.login_number,
       serverName: row.server_name,
       status: row.status,
@@ -110,6 +122,7 @@ export async function GET(request: NextRequest) {
       nickname: row.nickname ?? null,
       leverage: row.leverage,
       fixRate: row.fix_rate,
+      registrationDate: row.registration_date ?? null,
     }));
 
     return NextResponse.json(

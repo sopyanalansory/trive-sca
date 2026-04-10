@@ -24,6 +24,7 @@
     "migrate-investment-account": "tsx lib/run-investment-account-migration.ts",
     "migrate-salesforce-oauth-token": "tsx lib/run-salesforce-oauth-token-migration.ts",
     "migrate-add-nickname-fix-rate": "tsx lib/run-add-nickname-fix-rate-migration.ts",
+    "migrate-add-registration-date": "tsx lib/run-add-registration-date-migration.ts",
     "refresh-salesforce-token": "tsx scripts/refresh-salesforce-token.ts",
     "setup-salesforce-cron": "tsx scripts/setup-salesforce-cron.ts",
     "generate-favicon": "node scripts/generate-favicon.js"
