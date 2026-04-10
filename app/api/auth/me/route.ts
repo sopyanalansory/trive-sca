@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(
       `SELECT id, fullname, email, phone, country_code, 
        place_of_birth,
+       date_of_birth,
        client_id, contact_id, is_red_flag, lead_id, account_id,
        city, postal_code, street_name, house_number,
        profile_photo, profile_photo_mime_type
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
           phone: user.phone,
           countryCode: user.country_code,
           placeOfBirth: user.place_of_birth || '',
+          dateOfBirth: user.date_of_birth || null,
           clientId: user.client_id || null,
           contactId: user.contact_id || null,
           isRedFlag:
@@ -230,6 +232,7 @@ export async function PUT(request: NextRequest) {
       WHERE id = $${paramIndex}
       RETURNING id, fullname, email, phone, country_code, 
                 place_of_birth,
+                date_of_birth,
                 client_id, contact_id, is_red_flag, lead_id, account_id,
                 city, postal_code, street_name, house_number,
                 profile_photo, profile_photo_mime_type
@@ -260,6 +263,7 @@ export async function PUT(request: NextRequest) {
           phone: user.phone,
           countryCode: user.country_code,
           placeOfBirth: user.place_of_birth || '',
+          dateOfBirth: user.date_of_birth || null,
           clientId: user.client_id || null,
           contactId: user.contact_id || null,
           isRedFlag:
