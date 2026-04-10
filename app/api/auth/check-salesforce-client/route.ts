@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../../lib/db";
 import { hashPassword } from "../../../../lib/auth";
-import { digitsOnly, normalizePhoneForDb } from "../../../../lib/phone";
+import { digitsOnly, normalizePhoneForDb, toMsisdn } from "../../../../lib/phone";
 import {
   getLatestValidSalesforceToken,
   requestSalesforceAccessToken,
@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
     const rawPhone = typeof body?.phone === "string" ? body.phone : "";
 
     const email = rawEmail.toLowerCase().trim();
-    const phone = digitsOnly(rawPhone);
+    const phone = toMsisdn(digitsOnly(rawPhone), "+62");
 
     if (!email || !phone) {
       return NextResponse.json(

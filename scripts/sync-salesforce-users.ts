@@ -1,6 +1,6 @@
 import "dotenv/config";
 import pool from "@/lib/db";
-import { digitsOnly, normalizePhoneForDb } from "@/lib/phone";
+import { digitsOnly, normalizePhoneForDb, toMsisdn } from "@/lib/phone";
 import {
   getLatestValidSalesforceToken,
   requestSalesforceAccessToken,
@@ -348,12 +348,17 @@ async function main() {
   const shouldSyncAll = args.includes("--all");
   const limitArg = args.find((arg) => arg.startsWith("--limit="));
   const limit = limitArg ? Number(limitArg.split("=")[1]) : 200;
+  const resumeArg = args.find((arg) => arg.startsWith("--resume-from-id="));
+  const resumeFromId = resumeArg ? Number(resumeArg.split("=")[1]) : 0;
   const delayArg = args.find((arg) => arg.startsWith("--delay-ms="));
   const delayMs = delayArg ? Number(delayArg.split("=")[1]) : 1200;
   const retryArg = args.find((arg) => arg.startsWith("--max-retries="));
   const maxRetries = retryArg ? Number(retryArg.split("=")[1]) : 4;
   if (!Number.isFinite(limit) || limit <= 0) {
     throw new Error("Invalid --limit value. Example: --limit=200");
+  }
+  if (!Number.isFinite(resumeFromId) || resumeFromId < 0) {
+    throw new Error("Invalid --resume-from-id value. Example: --resume-from-id=1200");
   }
   if (!Number.isFinite(delayMs) || delayMs < 0) {
     throw new Error("Invalid --delay-ms value. Example: --delay-ms=1200");
@@ -387,17 +392,16 @@ async function main() {
     )
   `;
 
-  const query = shouldSyncAll
-    ? `SELECT id, email, phone FROM users
-       WHERE COALESCE(TRIM(email), '') <> '' AND COALESCE(TRIM(phone), '') <> ''
+  const baseWhere = shouldSyncAll
+    ? `COALESCE(TRIM(email), '') <> '' AND COALESCE(TRIM(phone), '') <> ''`
+    : whereMissing;
+  const query = `SELECT id, email, phone FROM users
+       WHERE ${baseWhere}
+         AND id > $1
        ORDER BY id ASC
-       LIMIT $1`
-    : `SELECT id, email, phone FROM users
-       WHERE ${whereMissing}
-       ORDER BY id ASC
-       LIMIT $1`;
+       LIMIT $2`;
 
-  const usersResult = await pool.query(query, [limit]);
+  const usersResult = await pool.query(query, [resumeFromId, limit]);
   const users = usersResult.rows as UserRow[];
   if (users.length === 0) {
     console.log("No users to sync.");
@@ -413,16 +417,17 @@ async function main() {
   for (const user of users) {
     try {
       const email = user.email.trim().toLowerCase();
-      const phoneDigits = digitsOnly(user.phone || "");
-      if (!email || !phoneDigits) {
+      const localPhoneDigits = digitsOnly(user.phone || "");
+      if (!email || !localPhoneDigits) {
         failed += 1;
         continue;
       }
+      const phoneMsisdn = toMsisdn(localPhoneDigits, "+62");
 
       const flowCall = await callSalesforceFlowSafely({
         token,
         email,
-        phone: phoneDigits,
+        phone: phoneMsisdn,
         maxRetries,
         baseDelayMs: Math.max(delayMs, 500),
       });
@@ -452,7 +457,7 @@ async function main() {
         continue;
       }
 
-      const payload = buildSyncPayload(email, phoneDigits, outputValues);
+      const payload = buildSyncPayload(email, localPhoneDigits, outputValues);
       await updateUserFromPayload(user.id, payload, availableColumns);
       synced += 1;
       if (delayMs > 0) {
@@ -473,6 +478,7 @@ async function main() {
   console.log(`Not found in Salesforce: ${notFound}`);
   console.log(`Failed: ${failed}`);
   console.log(`Hit rate limit/temporary unavailable: ${rateLimited}`);
+  console.log(`Last processed user id: ${users.at(-1)?.id ?? resumeFromId}`);
 }
 
 main()
