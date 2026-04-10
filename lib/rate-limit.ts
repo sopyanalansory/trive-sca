@@ -71,6 +71,8 @@ function getOtpWindowDuration(): string {
   return `${getOtpWindowMinutes()} m`;
 }
 
+type SlidingWindowDuration = Parameters<typeof Ratelimit.slidingWindow>[1];
+
 function getOtpWindowMs(): number {
   return getOtpWindowMinutes() * 60_000;
 }
@@ -101,7 +103,10 @@ function getOtpSendMsisdnRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_SEND_PER_MSISDN, 5);
   limiterCache.otpSendMsisdn = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
+    limiter: Ratelimit.slidingWindow(
+      max,
+      getOtpWindowDuration() as SlidingWindowDuration
+    ),
     prefix: "trive:rl:otp-send-msisdn",
   });
   return limiterCache.otpSendMsisdn;
@@ -117,7 +122,10 @@ function getOtpSendEmailRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_SEND_PER_EMAIL, 5);
   limiterCache.otpSendEmail = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
+    limiter: Ratelimit.slidingWindow(
+      max,
+      getOtpWindowDuration() as SlidingWindowDuration
+    ),
     prefix: "trive:rl:otp-send-email",
   });
   return limiterCache.otpSendEmail;
@@ -133,7 +141,10 @@ function getOtpVerifyMsisdnRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_VERIFY_PER_MSISDN, 20);
   limiterCache.otpVerifyMsisdn = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
+    limiter: Ratelimit.slidingWindow(
+      max,
+      getOtpWindowDuration() as SlidingWindowDuration
+    ),
     prefix: "trive:rl:otp-verify-msisdn",
   });
   return limiterCache.otpVerifyMsisdn;
@@ -149,7 +160,10 @@ function getOtpVerifyEmailRatelimit(): Ratelimit | null {
   const max = parsePositiveInt(process.env.RATE_LIMIT_OTP_VERIFY_PER_EMAIL, 20);
   limiterCache.otpVerifyEmail = new Ratelimit({
     redis: r,
-    limiter: Ratelimit.slidingWindow(max, getOtpWindowDuration()),
+    limiter: Ratelimit.slidingWindow(
+      max,
+      getOtpWindowDuration() as SlidingWindowDuration
+    ),
     prefix: "trive:rl:otp-verify-email",
   });
   return limiterCache.otpVerifyEmail;
