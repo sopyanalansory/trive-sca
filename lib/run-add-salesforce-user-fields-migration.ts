@@ -38,7 +38,7 @@ export async function runAddSalesforceUserFieldsMigration() {
     await pool.query(sqlFile);
 
     console.log('✅ Salesforce user fields migration completed successfully');
-    console.log('✅ Added: date_of_birth, lead_id, salesforce_interview_guid, salesforce_interview_status');
+    console.log('✅ Added: date_of_birth, lead_id, client_id, salesforce_interview_guid, salesforce_interview_status, is_red_flag, contact_id');
   } catch (error: any) {
     console.error('❌ Error running Salesforce user fields migration:', error);
     throw error;

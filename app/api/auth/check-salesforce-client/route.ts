@@ -45,8 +45,11 @@ type UserSyncPayload = {
   countryCode: string;
   placeOfBirth: string | null;
   dateOfBirth: string | null;
+  clientId: string | null;
   accountId: string | null;
   leadId: string | null;
+  contactId: string | null;
+  isRedFlag: boolean | null;
   interviewGuid: string | null;
   interviewStatus: string | null;
 };
@@ -124,6 +127,15 @@ function normalizeDateOnly(value: string | undefined): string | null {
   return parsedDate.toISOString().slice(0, 10);
 }
 
+function normalizeBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "y"].includes(normalized)) return true;
+  if (["false", "0", "no", "n"].includes(normalized)) return false;
+  return null;
+}
+
 function buildSyncPayload(
   fallbackEmail: string,
   fallbackPhone: string,
@@ -145,6 +157,13 @@ function buildSyncPayload(
     typeof outputValues?.placeOfBirth === "string" && outputValues.placeOfBirth.trim()
       ? outputValues.placeOfBirth.trim()
       : null;
+  const clientIdRaw =
+    outputValues?.clientId ??
+    outputValues?.client_id ??
+    outputValues?.ClientId ??
+    outputValues?.ClientID;
+  const clientId =
+    typeof clientIdRaw === "string" && clientIdRaw.trim() ? clientIdRaw.trim() : null;
   const accountId =
     typeof outputValues?.accountId === "string" && outputValues.accountId.trim()
       ? outputValues.accountId.trim()
@@ -153,6 +172,16 @@ function buildSyncPayload(
     typeof outputValues?.leadId === "string" && outputValues.leadId.trim()
       ? outputValues.leadId.trim()
       : null;
+  const contactIdRaw =
+    outputValues?.contactId ??
+    outputValues?.contact_id ??
+    outputValues?.ContactId ??
+    outputValues?.ContactID;
+  const contactId =
+    typeof contactIdRaw === "string" && contactIdRaw.trim() ? contactIdRaw.trim() : null;
+  const isRedFlag = normalizeBoolean(
+    outputValues?.isRedFlag ?? outputValues?.is_red_flag ?? outputValues?.IsRedFlag
+  );
   const interviewGuid =
     typeof outputValues?.Flow__InterviewGuid === "string" &&
     outputValues.Flow__InterviewGuid.trim()
@@ -174,8 +203,11 @@ function buildSyncPayload(
     dateOfBirth: normalizeDateOnly(
       typeof outputValues?.dateOfBirth === "string" ? outputValues.dateOfBirth : undefined
     ),
+    clientId,
     accountId,
     leadId,
+    contactId,
+    isRedFlag,
     interviewGuid,
     interviewStatus,
   };
@@ -219,8 +251,11 @@ async function saveOrSyncSalesforceUser(payload: UserSyncPayload): Promise<void>
   const optionalColumns = [
     "place_of_birth",
     "date_of_birth",
+    "client_id",
     "account_id",
     "lead_id",
+    "contact_id",
+    "is_red_flag",
     "salesforce_interview_guid",
     "salesforce_interview_status",
   ];
@@ -257,8 +292,14 @@ async function saveOrSyncSalesforceUser(payload: UserSyncPayload): Promise<void>
 
   appendOptionalInsert("place_of_birth", payload.placeOfBirth);
   appendOptionalInsert("date_of_birth", payload.dateOfBirth);
+  appendOptionalInsert("client_id", payload.clientId);
   appendOptionalInsert("account_id", payload.accountId);
   appendOptionalInsert("lead_id", payload.leadId);
+  appendOptionalInsert("contact_id", payload.contactId);
+  if (availableColumns.has("is_red_flag")) {
+    insertColumns.push("is_red_flag");
+    insertValues.push(payload.isRedFlag);
+  }
   appendOptionalInsert("salesforce_interview_guid", payload.interviewGuid);
   appendOptionalInsert("salesforce_interview_status", payload.interviewStatus);
 
@@ -271,7 +312,7 @@ async function saveOrSyncSalesforceUser(payload: UserSyncPayload): Promise<void>
   );
 
   const updateParts: string[] = ["fullname = $1", "country_code = $2"];
-  const updateValues: (string | null)[] = [payload.fullname, payload.countryCode];
+  const updateValues: (string | boolean | null)[] = [payload.fullname, payload.countryCode];
   let paramIndex = 3;
 
   if (payload.salesforcePhone) {
@@ -293,8 +334,15 @@ async function saveOrSyncSalesforceUser(payload: UserSyncPayload): Promise<void>
     paramIndex += 1;
   }
   pushOverwriteUpdate("place_of_birth", payload.placeOfBirth);
+  pushOverwriteUpdate("client_id", payload.clientId);
   pushOverwriteUpdate("account_id", payload.accountId);
   pushOverwriteUpdate("lead_id", payload.leadId);
+  pushOverwriteUpdate("contact_id", payload.contactId);
+  if (payload.isRedFlag !== null && availableColumns.has("is_red_flag")) {
+    updateParts.push(`is_red_flag = $${paramIndex}`);
+    updateValues.push(payload.isRedFlag);
+    paramIndex += 1;
+  }
   pushOverwriteUpdate("salesforce_interview_guid", payload.interviewGuid);
   pushOverwriteUpdate("salesforce_interview_status", payload.interviewStatus);
 
