@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
         nickname,
         leverage,
         fix_rate,
+        swap_free,
         type,
         registration_date
       FROM platforms 
@@ -84,6 +85,7 @@ export async function GET(request: NextRequest) {
               nickname,
               leverage,
               fix_rate,
+              swap_free,
               type,
               registration_date
             FROM platforms 
@@ -122,6 +124,7 @@ export async function GET(request: NextRequest) {
       nickname: row.nickname ?? null,
       leverage: row.leverage,
       fixRate: row.fix_rate,
+      swapFree: row.swap_free ?? null,
       registrationDate: row.registration_date ?? null,
     }));
 
