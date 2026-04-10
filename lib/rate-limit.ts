@@ -174,7 +174,7 @@ function rateLimitJsonResponse(
   retryAfterSec: number
 ): NextResponse {
   return NextResponse.json(
-    { error: "Terlalu banyak permintaan. Silakan coba lagi nanti." },
+    { error: "Terlalu banyak permintaan. Silakan coba lagi dalam beberapa menit." },
     {
       status: 429,
       headers: {
