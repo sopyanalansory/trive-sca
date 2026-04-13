@@ -26,6 +26,7 @@
     "migrate-add-nickname-fix-rate": "tsx lib/run-add-nickname-fix-rate-migration.ts",
     "migrate-add-registration-date": "tsx lib/run-add-registration-date-migration.ts",
     "migrate-campaign": "tsx lib/run-campaign-migration.ts",
+    "migrate-campaign-add-rewards-01": "tsx lib/run-add-rewards-01-to-campaigns-migration.ts",
     "migrate-campaign-members": "tsx lib/run-campaign-members-migration.ts",
     "migrate-user-campaign-sf-sync": "tsx lib/run-user-campaign-salesforce-sync-migration.ts",
     "refresh-salesforce-token": "tsx scripts/refresh-salesforce-token.ts",

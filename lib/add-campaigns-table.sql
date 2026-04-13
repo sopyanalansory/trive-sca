@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   share_banner_url VARCHAR(1000),
   share_url VARCHAR(1000),
   reward_title VARCHAR(500),
+  rewards_01 TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   start_date DATE,
   end_date DATE,

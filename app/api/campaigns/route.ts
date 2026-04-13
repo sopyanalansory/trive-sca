@@ -19,6 +19,7 @@ type CampaignRow = {
   share_banner_url: string | null;
   share_url: string | null;
   reward_title: string | null;
+  rewards_01: string | null;
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
@@ -111,6 +112,7 @@ async function getActiveCampaigns(): Promise<CampaignRow[]> {
       share_banner_url,
       share_url,
       reward_title,
+      rewards_01,
       is_active,
       start_date::text,
       end_date::text,
@@ -269,6 +271,7 @@ export async function GET(request: NextRequest) {
           shareBannerUrl: campaign.share_banner_url,
           shareUrl: campaign.share_url,
           rewardTitle: campaign.reward_title,
+          rewards01: campaign.rewards_01,
           isActive: campaign.is_active,
           startDate: campaign.start_date,
           endDate: campaign.end_date,

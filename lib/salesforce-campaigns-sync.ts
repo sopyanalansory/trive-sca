@@ -90,6 +90,7 @@ function mapSfCampaignToDbRow(rec: SfCampaignRecord) {
     share_banner_url: truncateStr(strField(rec, "Campaign_Share_Banner__c"), 1000),
     share_url: truncateStr(strField(rec, "Campaign_Share_Link__c"), 1000),
     reward_title: truncateStr(strField(rec, "Reward_Title__c"), 500),
+    rewards_01: strField(rec, "Rewards_01__c"),
     is_active: isDeleted ? false : toBool(rec.IsActive, true),
     start_date: parseDateOnly(strField(rec, "StartDate")),
     end_date: parseDateOnly(strField(rec, "EndDate")),
@@ -176,12 +177,13 @@ export async function upsertCampaignsFromSfRecords(
         share_banner_url,
         share_url,
         reward_title,
+        rewards_01,
         is_active,
         start_date,
         end_date,
         status
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
       )
       ON CONFLICT (campaign_id_from_salesforce) DO UPDATE SET
         banner_url = EXCLUDED.banner_url,
@@ -192,6 +194,7 @@ export async function upsertCampaignsFromSfRecords(
         share_banner_url = EXCLUDED.share_banner_url,
         share_url = EXCLUDED.share_url,
         reward_title = EXCLUDED.reward_title,
+        rewards_01 = EXCLUDED.rewards_01,
         is_active = EXCLUDED.is_active,
         start_date = EXCLUDED.start_date,
         end_date = EXCLUDED.end_date,
@@ -208,6 +211,7 @@ export async function upsertCampaignsFromSfRecords(
         row.share_banner_url,
         row.share_url,
         row.reward_title,
+        row.rewards_01,
         row.is_active,
         row.start_date,
         row.end_date,
