@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { sendTransferNotificationEmail } from '@/lib/email';
 import {
   getLatestValidSalesforceToken,
   requestSalesforceAccessToken,
@@ -31,6 +32,7 @@ type SalesforceTransferOutput = {
 type PlatformRow = {
   id: number;
   type: string | null;
+  login_number: string | null;
   platform_registration_id: string | null;
 };
 
@@ -186,7 +188,7 @@ export async function POST(request: NextRequest) {
 
     const platformResult = await pool.query(
       `
-      SELECT id, type, platform_registration_id
+      SELECT id, type, login_number, platform_registration_id
       FROM platforms
       WHERE user_id = $1
         AND id IN ($2, $3)
@@ -292,6 +294,31 @@ export async function POST(request: NextRequest) {
       ]
     );
     const transferRequest = insertResult.rows[0];
+
+    // Get user details for email
+    const userResult = await pool.query(
+      'SELECT id, fullname, email FROM users WHERE id = $1',
+      [decoded.userId]
+    );
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      sendTransferNotificationEmail({
+        userId: user.id,
+        userName: user.fullname,
+        userEmail: user.email,
+        platformIdOrigin: origin.id,
+        platformIdDestination: destination.id,
+        loginNumberOrigin: origin.login_number || '-',
+        loginNumberDestination: destination.login_number || '-',
+        currency: String(currency || 'USD').toUpperCase(),
+        amount: amountNum,
+        comment: typeof comment === 'string' ? comment : undefined,
+        requestId: transferRequest.id,
+        createdAt: transferRequest.created_at,
+      }).catch((error: unknown) => {
+        logRouteError(log, request, error, 'Transfer notification email failed');
+      });
+    }
 
     return NextResponse.json(
       {

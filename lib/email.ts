@@ -43,6 +43,21 @@ interface WithdrawalEmailData {
   createdAt: Date;
 }
 
+interface TransferEmailData {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  platformIdOrigin: number;
+  platformIdDestination: number;
+  loginNumberOrigin: string;
+  loginNumberDestination: string;
+  currency: string;
+  amount: number;
+  comment?: string;
+  requestId: number;
+  createdAt: Date;
+}
+
 export async function sendDepositNotificationEmail(data: DepositEmailData) {
   try {
     const formattedAmount = new Intl.NumberFormat('id-ID', {
@@ -285,6 +300,128 @@ Email ini dikirim otomatis dari sistem Trive Invest
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
     console.error("Error sending withdrawal notification email:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function sendTransferNotificationEmail(data: TransferEmailData) {
+  try {
+    const formattedAmount = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: data.currency,
+      minimumFractionDigits: 2,
+    }).format(data.amount);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #69d7f6; color: white; padding: 20px; text-align: center; }
+          .content { background-color: #f9f9f9; padding: 20px; }
+          .info-row { margin: 10px 0; padding: 10px; background-color: white; border-left: 3px solid #69d7f6; }
+          .label { font-weight: bold; color: #555; }
+          .value { color: #333; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Notifikasi Transfer Request</h2>
+          </div>
+          <div class="content">
+            <p>Ada request transfer baru yang perlu ditinjau:</p>
+
+            <div class="info-row">
+              <span class="label">Nama:</span>
+              <span class="value">${data.userName}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">Email:</span>
+              <span class="value">${data.userEmail}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">Akun Asal:</span>
+              <span class="value">${data.loginNumberOrigin}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">Akun Tujuan:</span>
+              <span class="value">${data.loginNumberDestination}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">Mata Uang:</span>
+              <span class="value">${data.currency}</span>
+            </div>
+
+            <div class="info-row">
+              <span class="label">Jumlah:</span>
+              <span class="value"><strong>${formattedAmount}</strong></span>
+            </div>
+
+            ${data.comment ? `
+            <div class="info-row">
+              <span class="label">Penjelasan:</span>
+              <span class="value">${data.comment}</span>
+            </div>
+            ` : ''}
+
+            <div class="info-row">
+              <span class="label">Waktu Request:</span>
+              <span class="value">${new Date(data.createdAt).toLocaleString('id-ID', {
+                dateStyle: 'full',
+                timeStyle: 'medium'
+              })}</span>
+            </div>
+          </div>
+          <div class="footer">
+            <p>Email ini dikirim otomatis dari sistem Trive Invest</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `
+Notifikasi Transfer Request
+
+Ada request transfer baru yang perlu ditinjau:
+
+Request ID: #${data.requestId}
+User: ${data.userName} (${data.userEmail})
+User ID: ${data.userId}
+Akun Asal: ${data.loginNumberOrigin} (Platform ID: ${data.platformIdOrigin})
+Akun Tujuan: ${data.loginNumberDestination} (Platform ID: ${data.platformIdDestination})
+Mata Uang: ${data.currency}
+Jumlah: ${formattedAmount}
+${data.comment ? `Penjelasan: ${data.comment}` : ''}
+Waktu Request: ${new Date(data.createdAt).toLocaleString('id-ID', {
+  dateStyle: 'full',
+  timeStyle: 'medium'
+})}
+
+Email ini dikirim otomatis dari sistem Trive Invest
+    `;
+
+    const info = await transporter.sendMail({
+      from: '"No-reply Trive Invest" <no-reply@triveinvest.co.id>',
+      to: NOTIFICATION_EMAIL,
+      subject: `[Transfer Request] #${data.requestId} - ${data.userName} - ${formattedAmount}`,
+      text: textContent,
+      html: htmlContent,
+    });
+
+    console.log("Transfer notification email sent:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Error sending transfer notification email:", error);
     return { success: false, error: error.message };
   }
 }
