@@ -157,8 +157,7 @@ async function upsertSinglePlatformRow(
     (pickRowBoolean(row, ["IsLive__c"]) ? "Live" : null) ||
     (pickRowBoolean(row, ["IsDemo__c"]) ? "Demo" : null) ||
     "Live";
-  const salesforceCreatedAt =
-    pickSalesforceDate(row, ["CreatedDate__c", "CreatedDate"]) || null;
+  const salesforceCreatedAt = pickSalesforceDate(row, ["RegistrationDate__c"]) || null;
 
   await pool.query(
     `INSERT INTO platforms (
