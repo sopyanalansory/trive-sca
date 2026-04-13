@@ -240,10 +240,19 @@ export async function POST(request: NextRequest) {
     // Insert withdrawal request
     const result = await pool.query(
       `INSERT INTO withdrawal_requests 
-       (user_id, platform_id, bank_name, currency, amount, description, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'Pending')
-       RETURNING id, user_id, platform_id, bank_name, currency, amount, description, status, created_at`,
-      [decoded.userId, platformId, bankName, currency, amountNum, description || null]
+       (user_id, platform_id, bank_name, currency, amount, description, status, salesforce_request_id, salesforce_created_date)
+       VALUES ($1, $2, $3, $4, $5, $6, 'Pending', $7, $8)
+       RETURNING id, user_id, platform_id, bank_name, currency, amount, description, status, salesforce_request_id, salesforce_created_date, created_at`,
+      [
+        decoded.userId,
+        platformId,
+        bankName,
+        currency,
+        amountNum,
+        description || null,
+        salesforceFinancialRequestId,
+        salesforceOutput?.data?.CreatedDate || null,
+      ]
     );
 
     const withdrawalRequest = result.rows[0];
@@ -282,6 +291,8 @@ export async function POST(request: NextRequest) {
           amount: parseFloat(withdrawalRequest.amount),
           description: withdrawalRequest.description,
           status: withdrawalRequest.status,
+          salesforceRequestId: withdrawalRequest.salesforce_request_id,
+          salesforceCreatedDate: withdrawalRequest.salesforce_created_date,
           createdAt: withdrawalRequest.created_at,
         },
       },
