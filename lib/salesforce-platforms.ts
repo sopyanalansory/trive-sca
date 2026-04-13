@@ -515,14 +515,26 @@ export async function fetchAndPersistPlatformsForUser(
   accountOrLeadId: string
 ): Promise<void> {
   const userResult = await pool.query(
-    "SELECT account_id FROM users WHERE id = $1 LIMIT 1",
+    "SELECT account_id, lead_id FROM users WHERE id = $1 LIMIT 1",
     [userId]
   );
-  const userAccountId =
+
+  const normalizedAccountId =
     userResult.rows[0]?.account_id &&
     String(userResult.rows[0].account_id).trim()
       ? String(userResult.rows[0].account_id).trim()
       : null;
+  const normalizedLeadId =
+    userResult.rows[0]?.lead_id && String(userResult.rows[0].lead_id).trim()
+      ? String(userResult.rows[0].lead_id).trim()
+      : null;
+  const normalizedAccountOrLeadId = accountOrLeadId.trim() || null;
+
+  // Some users are not backfilled with account_id yet; keep sync working
+  // by falling back to lead_id / token id used to call Salesforce flow.
+  const userAccountId =
+    normalizedAccountId || normalizedLeadId || normalizedAccountOrLeadId;
+
   if (!userAccountId) {
     throw new Error("User account_id not found in users table");
   }

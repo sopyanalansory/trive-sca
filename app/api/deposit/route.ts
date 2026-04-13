@@ -200,6 +200,23 @@ export async function POST(request: NextRequest) {
       ipAddress: getClientIpAddress(request),
       comment: typeof description === 'string' ? description : '',
     });
+    const salesforceFinancialRequestId = salesforceOutput?.data?.Id
+      ? String(salesforceOutput.data.Id).trim()
+      : '';
+    if (!salesforceFinancialRequestId) {
+      return NextResponse.json(
+        {
+          error:
+            salesforceOutput?.message || 'Salesforce gagal memproses deposit request.',
+          salesforce: {
+            message: salesforceOutput?.message || null,
+            financialRequestId: null,
+            createdDate: salesforceOutput?.data?.CreatedDate || null,
+          },
+        },
+        { status: 502 }
+      );
+    }
 
     // Get user details for email
     const userResult = await pool.query(
