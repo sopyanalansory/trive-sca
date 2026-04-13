@@ -37,14 +37,28 @@ type CampaignMemberRow = {
   updated_at: Date;
 };
 
+type CampaignMemberDto = {
+  id: number;
+  campaignId: number;
+  campaignIdFromSalesforce: string;
+  clientId: string | null;
+  contactId: string | null;
+  leadOrContactId: string | null;
+  leadId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type UserRow = {
   id: number;
   email: string;
   phone: string | null;
   country_code: string | null;
+  account_id: string | null;
   client_id: string | null;
   contact_id: string | null;
   lead_id: string | null;
+  is_red_flag: boolean | null;
 };
 
 async function hasSyncedCampaignMembers(userId: number): Promise<boolean> {
@@ -64,7 +78,16 @@ async function hasSyncedCampaignMembers(userId: number): Promise<boolean> {
 async function getUserById(userId: number): Promise<UserRow | null> {
   const result = await pool.query(
     `
-    SELECT id, email, phone, country_code, client_id, contact_id, lead_id
+    SELECT
+      id,
+      email,
+      phone,
+      country_code,
+      account_id,
+      client_id,
+      contact_id,
+      lead_id,
+      is_red_flag
     FROM users
     WHERE id = $1
     LIMIT 1
@@ -201,13 +224,41 @@ export async function GET(request: NextRequest) {
       getUserCampaignMembers(refreshedUser),
     ]);
 
-    const registeredCampaignIds = new Set(
-      campaignMembers.map((member) => member.campaign_id_from_salesforce)
-    );
+    const campaignMemberByCampaignSfId = new Map<string, CampaignMemberDto>();
+    for (const member of campaignMembers) {
+      if (!campaignMemberByCampaignSfId.has(member.campaign_id_from_salesforce)) {
+        campaignMemberByCampaignSfId.set(member.campaign_id_from_salesforce, {
+          id: member.id,
+          campaignId: member.campaign_id,
+          campaignIdFromSalesforce: member.campaign_id_from_salesforce,
+          clientId: member.client_id,
+          contactId: member.contact_id,
+          leadOrContactId: member.lead_or_contact_id,
+          leadId: member.lead_id,
+          createdAt: member.created_at,
+          updatedAt: member.updated_at,
+        });
+      }
+    }
 
     return NextResponse.json(
       {
+        user: {
+          id: refreshedUser.id,
+          email: refreshedUser.email,
+          account_id: refreshedUser.account_id,
+          contact_id: refreshedUser.contact_id,
+          lead_id: refreshedUser.lead_id,
+          is_red_flag:
+            typeof refreshedUser.is_red_flag === "boolean"
+              ? refreshedUser.is_red_flag
+              : null,
+        },
         campaigns: campaigns.map((campaign) => ({
+          campaignMember:
+            campaignMemberByCampaignSfId.get(
+              campaign.campaign_id_from_salesforce
+            ) ?? null,
           id: campaign.id,
           campaignIdFromSalesforce: campaign.campaign_id_from_salesforce,
           bannerUrl: campaign.banner_url,
@@ -222,7 +273,7 @@ export async function GET(request: NextRequest) {
           startDate: campaign.start_date,
           endDate: campaign.end_date,
           status: campaign.status,
-          isRegistered: registeredCampaignIds.has(
+          isRegistered: campaignMemberByCampaignSfId.has(
             campaign.campaign_id_from_salesforce
           ),
         })),
