@@ -148,7 +148,7 @@ async function upsertSinglePlatformRow(
   const fixRate =
     pickRowString(row, ["fixRate", "FixRate", "Fix_Rate__c"]) || null;
   const swapFree = normalizeSwapFree(
-    pickRowString(row, ["swapFree", "swap_free", "Swap Free", "SwapFree__c"]) ||
+    pickRowString(row, ["Swap_Free__c"]) ||
       "Tidak"
   );
   const type =
