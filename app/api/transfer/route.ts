@@ -11,7 +11,7 @@ import { apiLogger, logRouteError } from '@/lib/logger';
 const log = apiLogger('transfer');
 const SALESFORCE_CREATE_TRANSFER_FLOW_URL =
   process.env.SALESFORCE_CREATE_TRANSFER_FLOW_URL ||
-  'https://gkg-mfsa.my.salesforce.com/services/data/v66.0/actions/custom/flow/Trive_Invest_API_Create_Deposit_Withdrawal';
+  'https://gkg-mfsa.my.salesforce.com/services/data/v66.0/actions/custom/flow/Trive_Invest_API_Create_Transfer_Request';
 
 type SalesforceTransferOutput = {
   dataOrigin?: {
