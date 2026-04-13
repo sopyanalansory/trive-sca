@@ -232,7 +232,7 @@ export async function syncUserCampaignMembersFromSalesforce(
           $4,
           $5
         FROM campaigns c
-        WHERE c.campaign_id_from_salesforce = $1
+        WHERE c.campaign_id_from_salesforce::text = $6::text
         `,
         [
           campaignIdFromSf,
@@ -240,6 +240,7 @@ export async function syncUserCampaignMembersFromSalesforce(
           memberContactId,
           memberLeadOrContactId,
           memberLeadId,
+          campaignIdFromSf,
         ]
       );
       inserted += insertedResult.rowCount ?? 0;
