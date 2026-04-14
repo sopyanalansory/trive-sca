@@ -264,9 +264,10 @@ export async function syncUserCampaignMembersFromSalesforce(
           $5,
           $6,
           $7,
-          $8
+          $8,
+          $9
         FROM campaigns c
-        WHERE c.campaign_id_from_salesforce::text = $9::text
+        WHERE c.campaign_id_from_salesforce::text = $10::text
         `,
         [
           campaignIdFromSf,
