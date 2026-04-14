@@ -51,6 +51,35 @@ function toBool(value: unknown, defaultTrue: boolean): boolean {
   return defaultTrue;
 }
 
+/**
+ * Parse webhook / outbound body from Salesforce (JSON). Accepts:
+ * - `{ campaigns: [ { Id, Name, ... }, ... ] }`
+ * - `[ { Id, ... }, ... ]`
+ * - single object `{ Id, ... }` (one campaign)
+ */
+export function extractCampaignArrayFromWebhookPayload(
+  body: unknown
+): SfCampaignRecord[] {
+  if (body == null) return [];
+  if (Array.isArray(body)) {
+    return body.filter(
+      (c): c is SfCampaignRecord => c != null && typeof c === "object"
+    );
+  }
+  if (typeof body === "object" && !Array.isArray(body)) {
+    const o = body as Record<string, unknown>;
+    if (Array.isArray(o.campaigns)) {
+      return o.campaigns.filter(
+        (c): c is SfCampaignRecord => c != null && typeof c === "object"
+      );
+    }
+    if (typeof o.Id === "string" && o.Id.trim()) {
+      return [o as SfCampaignRecord];
+    }
+  }
+  return [];
+}
+
 export function extractCampaignsFromFlowResponse(parsed: unknown): SfCampaignRecord[] {
   const arr = Array.isArray(parsed) ? parsed : null;
   if (!arr?.length) return [];
@@ -222,6 +251,81 @@ export async function upsertCampaignsFromSfRecords(
   }
 
   return { fetched: records.length, upserted, skipped };
+}
+
+/** Webhook: only UPDATE rows that already exist; never INSERT. */
+export type UpdateExistingCampaignsResult = {
+  fetched: number;
+  updated: number;
+  skipped: number;
+  notInDatabase: number;
+};
+
+export async function updateExistingCampaignsFromSfRecords(
+  records: SfCampaignRecord[]
+): Promise<UpdateExistingCampaignsResult> {
+  let updated = 0;
+  let skipped = 0;
+  let notInDatabase = 0;
+
+  for (const rec of records) {
+    const row = mapSfCampaignToDbRow(rec);
+    if (!row) {
+      skipped += 1;
+      continue;
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE campaigns SET
+        banner_url = $2,
+        name = $3,
+        description = $4,
+        terms_conditions_url = $5,
+        see_details_url = $6,
+        share_banner_url = $7,
+        share_url = $8,
+        reward_title = $9,
+        rewards_01 = $10,
+        is_active = $11,
+        start_date = $12,
+        end_date = $13,
+        status = $14,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE campaign_id_from_salesforce = $1
+      `,
+      [
+        row.campaign_id_from_salesforce,
+        row.banner_url,
+        row.name,
+        row.description,
+        row.terms_conditions_url,
+        row.see_details_url,
+        row.share_banner_url,
+        row.share_url,
+        row.reward_title,
+        row.rewards_01,
+        row.is_active,
+        row.start_date,
+        row.end_date,
+        row.status,
+      ]
+    );
+
+    const n = result.rowCount ?? 0;
+    if (n === 0) {
+      notInDatabase += 1;
+    } else {
+      updated += 1;
+    }
+  }
+
+  return {
+    fetched: records.length,
+    updated,
+    skipped,
+    notInDatabase,
+  };
 }
 
 export async function syncCampaignsFromSalesforce(): Promise<SyncCampaignsResult> {
