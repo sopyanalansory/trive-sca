@@ -261,6 +261,7 @@ export async function POST(request: NextRequest) {
     const output = parseRegisterCampaignOutput(sfParsed);
     const sfMember = output?.campaignMember ?? null;
     const sfCampaignId = cleanString(sfMember?.CampaignId) || campaign.campaign_id_from_salesforce;
+    const sfCampaignMemberId = cleanString(sfMember?.Id);
     const sfStatusCode = cleanString(sfMember?.Status__c);
     const sfStatusLabel = mapCampaignMemberStatusLabel(sfStatusCode);
     const sfSelectedRewards = cleanString(sfMember?.Selected_Rewards__c);
@@ -270,6 +271,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO campaign_members (
         campaign_id,
         campaign_id_from_salesforce,
+        campaign_member_id_from_salesforce,
         client_id,
         contact_id,
         lead_or_contact_id,
@@ -277,12 +279,13 @@ export async function POST(request: NextRequest) {
         status_code,
         status_label,
         selected_rewards
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, campaign_id, campaign_id_from_salesforce, client_id, contact_id, lead_or_contact_id, lead_id, status_code, status_label, selected_rewards, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id, campaign_id, campaign_id_from_salesforce, campaign_member_id_from_salesforce, client_id, contact_id, lead_or_contact_id, lead_id, status_code, status_label, selected_rewards, created_at, updated_at
       `,
       [
         campaign.id,
         sfCampaignId,
+        sfCampaignMemberId,
         cleanString(sfMember?.ClientId__c) || user.client_id,
         cleanString(sfMember?.ContactId) || user.contact_id,
         cleanString(sfMember?.LeadOrContactId) || leadOrContactId,
@@ -311,6 +314,8 @@ export async function POST(request: NextRequest) {
           id: campaignMember.id,
           campaignId: campaignMember.campaign_id,
           campaignIdFromSalesforce: campaignMember.campaign_id_from_salesforce,
+          campaignMemberIdFromSalesforce:
+            campaignMember.campaign_member_id_from_salesforce,
           clientId: campaignMember.client_id,
           contactId: campaignMember.contact_id,
           leadOrContactId: campaignMember.lead_or_contact_id,

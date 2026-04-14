@@ -9,5 +9,4 @@ COMMENT ON COLUMN user_campaign_salesforce_sync.synced_at IS 'Set setelah flow p
 
 -- Upgrade dari skema lama: hapus kolom SF per-baris di campaign_members
 DROP INDEX IF EXISTS idx_campaign_members_pending_sf_sync;
-ALTER TABLE campaign_members DROP COLUMN IF EXISTS campaign_member_id_from_salesforce;
 ALTER TABLE campaign_members DROP COLUMN IF EXISTS synced_to_salesforce_at;

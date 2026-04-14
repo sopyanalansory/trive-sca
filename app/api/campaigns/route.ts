@@ -30,6 +30,7 @@ type CampaignMemberRow = {
   id: number;
   campaign_id: number;
   campaign_id_from_salesforce: string;
+  campaign_member_id_from_salesforce: string | null;
   client_id: string | null;
   contact_id: string | null;
   lead_or_contact_id: string | null;
@@ -45,6 +46,7 @@ type CampaignMemberDto = {
   id: number;
   campaignId: number;
   campaignIdFromSalesforce: string;
+  campaignMemberIdFromSalesforce: string | null;
   clientId: string | null;
   contactId: string | null;
   leadOrContactId: string | null;
@@ -161,6 +163,7 @@ async function getUserCampaignMembers(user: UserRow): Promise<CampaignMemberRow[
       cm.id,
       cm.campaign_id,
       cm.campaign_id_from_salesforce,
+      cm.campaign_member_id_from_salesforce,
       cm.client_id,
       cm.contact_id,
       cm.lead_or_contact_id,
@@ -242,6 +245,8 @@ export async function GET(request: NextRequest) {
           id: member.id,
           campaignId: member.campaign_id,
           campaignIdFromSalesforce: member.campaign_id_from_salesforce,
+          campaignMemberIdFromSalesforce:
+            member.campaign_member_id_from_salesforce,
           clientId: member.client_id,
           contactId: member.contact_id,
           leadOrContactId: member.lead_or_contact_id,
@@ -298,6 +303,8 @@ export async function GET(request: NextRequest) {
                 id: member.id,
                 campaignId: member.campaign_id,
                 campaignIdFromSalesforce: member.campaign_id_from_salesforce,
+                campaignMemberIdFromSalesforce:
+                  member.campaign_member_id_from_salesforce,
                 clientId: member.client_id,
                 contactId: member.contact_id,
                 leadOrContactId: member.lead_or_contact_id,

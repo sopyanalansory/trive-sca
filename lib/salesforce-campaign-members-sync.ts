@@ -16,6 +16,7 @@ function getSearchClientFlowUrl(): string {
 }
 
 type CampaignMemberPayload = {
+  Id?: string | null;
   CampaignId?: string | null;
   ClientId__c?: string | null;
   ContactId?: string | null;
@@ -222,6 +223,7 @@ export async function syncUserCampaignMembersFromSalesforce(
     for (const member of campaignMembers) {
       const campaignIdFromSf = cleanString(member.CampaignId);
       if (!campaignIdFromSf) continue;
+      const campaignMemberIdFromSf = cleanString(member.Id);
 
       const memberClientId =
         cleanString(member.ClientId__c) || sfClientId || user.clientId;
@@ -244,6 +246,7 @@ export async function syncUserCampaignMembersFromSalesforce(
         INSERT INTO campaign_members (
           campaign_id,
           campaign_id_from_salesforce,
+          campaign_member_id_from_salesforce,
           client_id,
           contact_id,
           lead_or_contact_id,
@@ -267,6 +270,7 @@ export async function syncUserCampaignMembersFromSalesforce(
         `,
         [
           campaignIdFromSf,
+          campaignMemberIdFromSf,
           memberClientId,
           memberContactId,
           memberLeadOrContactId,

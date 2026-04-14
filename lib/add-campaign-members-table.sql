@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS campaign_members (
   id SERIAL PRIMARY KEY,
   campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   campaign_id_from_salesforce VARCHAR(255) NOT NULL,
+  campaign_member_id_from_salesforce VARCHAR(255),
   client_id VARCHAR(255),
   contact_id VARCHAR(255),
   lead_or_contact_id VARCHAR(255),
@@ -14,6 +15,7 @@ CREATE TABLE IF NOT EXISTS campaign_members (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS campaign_member_id_from_salesforce VARCHAR(255);
 ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS status_code VARCHAR(16);
 ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS status_label VARCHAR(64);
 ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS selected_rewards TEXT;
@@ -31,6 +33,7 @@ CREATE TRIGGER update_campaign_members_updated_at BEFORE UPDATE ON campaign_memb
 
 COMMENT ON TABLE campaign_members IS 'User/client membership per campaign; mirrors Salesforce Campaign Member–style ids';
 COMMENT ON COLUMN campaign_members.campaign_id_from_salesforce IS 'Denormalized Salesforce Campaign id (same as campaigns.campaign_id_from_salesforce)';
+COMMENT ON COLUMN campaign_members.campaign_member_id_from_salesforce IS 'Salesforce Campaign Member Id (record Id, e.g. 00v...)';
 COMMENT ON COLUMN campaign_members.client_id IS 'Client identifier (e.g. internal or Salesforce Account id)';
 COMMENT ON COLUMN campaign_members.contact_id IS 'Salesforce Contact Id';
 COMMENT ON COLUMN campaign_members.lead_or_contact_id IS 'Salesforce LeadOrContactId (polymorphic)';
