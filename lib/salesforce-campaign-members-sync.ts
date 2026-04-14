@@ -21,6 +21,8 @@ type CampaignMemberPayload = {
   ContactId?: string | null;
   LeadOrContactId?: string | null;
   LeadId?: string | null;
+  Status__c?: string | null;
+  Selected_Rewards__c?: string | null;
   [key: string]: unknown;
 };
 
@@ -61,6 +63,26 @@ function cleanString(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const trimmed = v.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function mapCampaignMemberStatusLabel(statusCode: string | null): string | null {
+  if (!statusCode) return null;
+  switch (statusCode) {
+    case "1":
+      return "Applicant";
+    case "2":
+      return "Application Rejected";
+    case "3":
+      return "Registered";
+    case "4":
+      return "Claimed";
+    case "5":
+      return "Claim Rejected";
+    case "6":
+      return "Eligible for Claim";
+    default:
+      return null;
+  }
 }
 
 function extractOutputValues(parsed: unknown): SearchClientOutput | null {
@@ -213,6 +235,9 @@ export async function syncUserCampaignMembersFromSalesforce(
         user.leadId;
       const memberLeadId =
         cleanString(member.LeadId) || sfLeadId || user.leadId;
+      const memberStatusCode = cleanString(member.Status__c);
+      const memberStatusLabel = mapCampaignMemberStatusLabel(memberStatusCode);
+      const memberSelectedRewards = cleanString(member.Selected_Rewards__c);
 
       const insertedResult = await client.query(
         `
@@ -222,7 +247,10 @@ export async function syncUserCampaignMembersFromSalesforce(
           client_id,
           contact_id,
           lead_or_contact_id,
-          lead_id
+          lead_id,
+          status_code,
+          status_label,
+          selected_rewards
         )
         SELECT
           c.id,
@@ -230,9 +258,12 @@ export async function syncUserCampaignMembersFromSalesforce(
           $2,
           $3,
           $4,
-          $5
+          $5,
+          $6,
+          $7,
+          $8
         FROM campaigns c
-        WHERE c.campaign_id_from_salesforce::text = $6::text
+        WHERE c.campaign_id_from_salesforce::text = $9::text
         `,
         [
           campaignIdFromSf,
@@ -240,6 +271,9 @@ export async function syncUserCampaignMembersFromSalesforce(
           memberContactId,
           memberLeadOrContactId,
           memberLeadId,
+          memberStatusCode,
+          memberStatusLabel,
+          memberSelectedRewards,
           campaignIdFromSf,
         ]
       );

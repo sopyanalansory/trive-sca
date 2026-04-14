@@ -21,6 +21,8 @@ type RegisterCampaignOutput = {
     ContactId?: string | null;
     LeadOrContactId?: string | null;
     LeadId?: string | null;
+    Status__c?: string | null;
+    Selected_Rewards__c?: string | null;
     Id?: string | null;
     [key: string]: unknown;
   } | null;
@@ -46,6 +48,26 @@ function cleanString(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const trimmed = v.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function mapCampaignMemberStatusLabel(statusCode: string | null): string | null {
+  if (!statusCode) return null;
+  switch (statusCode) {
+    case "1":
+      return "Applicant";
+    case "2":
+      return "Application Rejected";
+    case "3":
+      return "Registered";
+    case "4":
+      return "Claimed";
+    case "5":
+      return "Claim Rejected";
+    case "6":
+      return "Eligible for Claim";
+    default:
+      return null;
+  }
 }
 
 function getRegisterCampaignFlowUrl(): string {
@@ -239,6 +261,9 @@ export async function POST(request: NextRequest) {
     const output = parseRegisterCampaignOutput(sfParsed);
     const sfMember = output?.campaignMember ?? null;
     const sfCampaignId = cleanString(sfMember?.CampaignId) || campaign.campaign_id_from_salesforce;
+    const sfStatusCode = cleanString(sfMember?.Status__c);
+    const sfStatusLabel = mapCampaignMemberStatusLabel(sfStatusCode);
+    const sfSelectedRewards = cleanString(sfMember?.Selected_Rewards__c);
 
     const insertResult = await pool.query(
       `
@@ -248,9 +273,12 @@ export async function POST(request: NextRequest) {
         client_id,
         contact_id,
         lead_or_contact_id,
-        lead_id
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, campaign_id, campaign_id_from_salesforce, client_id, contact_id, lead_or_contact_id, lead_id, created_at, updated_at
+        lead_id,
+        status_code,
+        status_label,
+        selected_rewards
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id, campaign_id, campaign_id_from_salesforce, client_id, contact_id, lead_or_contact_id, lead_id, status_code, status_label, selected_rewards, created_at, updated_at
       `,
       [
         campaign.id,
@@ -259,6 +287,9 @@ export async function POST(request: NextRequest) {
         cleanString(sfMember?.ContactId) || user.contact_id,
         cleanString(sfMember?.LeadOrContactId) || leadOrContactId,
         cleanString(sfMember?.LeadId) || user.lead_id,
+        sfStatusCode,
+        sfStatusLabel,
+        sfSelectedRewards,
       ]
     );
 
@@ -284,6 +315,9 @@ export async function POST(request: NextRequest) {
           contactId: campaignMember.contact_id,
           leadOrContactId: campaignMember.lead_or_contact_id,
           leadId: campaignMember.lead_id,
+          statusCode: campaignMember.status_code,
+          statusLabel: campaignMember.status_label,
+          selectedRewards: campaignMember.selected_rewards,
           createdAt: campaignMember.created_at,
           updatedAt: campaignMember.updated_at,
         },

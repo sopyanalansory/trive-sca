@@ -28,12 +28,17 @@ export async function runCampaignMembersMigration() {
   try {
     console.log('Running campaign_members table migration...');
 
-    const sqlFile = readFileSync(
+    const baseSqlFile = readFileSync(
       join(process.cwd(), 'lib', 'add-campaign-members-table.sql'),
       'utf8'
     );
+    const statusSqlFile = readFileSync(
+      join(process.cwd(), 'lib', 'add-campaign-members-status-columns.sql'),
+      'utf8'
+    );
 
-    await pool.query(sqlFile);
+    await pool.query(baseSqlFile);
+    await pool.query(statusSqlFile);
 
     console.log('Campaign members migration completed successfully');
   } catch (error: any) {

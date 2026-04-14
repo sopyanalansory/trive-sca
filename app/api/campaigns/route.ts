@@ -34,6 +34,9 @@ type CampaignMemberRow = {
   contact_id: string | null;
   lead_or_contact_id: string | null;
   lead_id: string | null;
+  status_code: string | null;
+  status_label: string | null;
+  selected_rewards: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -46,6 +49,9 @@ type CampaignMemberDto = {
   contactId: string | null;
   leadOrContactId: string | null;
   leadId: string | null;
+  statusCode: string | null;
+  statusLabel: string | null;
+  selectedRewards: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -159,6 +165,9 @@ async function getUserCampaignMembers(user: UserRow): Promise<CampaignMemberRow[
       cm.contact_id,
       cm.lead_or_contact_id,
       cm.lead_id,
+      cm.status_code,
+      cm.status_label,
+      cm.selected_rewards,
       cm.created_at,
       cm.updated_at
     FROM campaign_members cm
@@ -237,6 +246,9 @@ export async function GET(request: NextRequest) {
           contactId: member.contact_id,
           leadOrContactId: member.lead_or_contact_id,
           leadId: member.lead_id,
+          statusCode: member.status_code,
+          statusLabel: member.status_label,
+          selectedRewards: member.selected_rewards,
           createdAt: member.created_at,
           updatedAt: member.updated_at,
         });
@@ -290,6 +302,9 @@ export async function GET(request: NextRequest) {
                 contactId: member.contact_id,
                 leadOrContactId: member.lead_or_contact_id,
                 leadId: member.lead_id,
+                statusCode: member.status_code,
+                statusLabel: member.status_label,
+                selectedRewards: member.selected_rewards,
                 createdAt: member.created_at,
                 updatedAt: member.updated_at,
               }))

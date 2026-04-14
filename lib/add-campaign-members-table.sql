@@ -7,9 +7,16 @@ CREATE TABLE IF NOT EXISTS campaign_members (
   contact_id VARCHAR(255),
   lead_or_contact_id VARCHAR(255),
   lead_id VARCHAR(255),
+  status_code VARCHAR(16),
+  status_label VARCHAR(64),
+  selected_rewards TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS status_code VARCHAR(16);
+ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS status_label VARCHAR(64);
+ALTER TABLE campaign_members ADD COLUMN IF NOT EXISTS selected_rewards TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_members_campaign_id ON campaign_members(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_members_campaign_id_sf ON campaign_members(campaign_id_from_salesforce);
@@ -28,3 +35,6 @@ COMMENT ON COLUMN campaign_members.client_id IS 'Client identifier (e.g. interna
 COMMENT ON COLUMN campaign_members.contact_id IS 'Salesforce Contact Id';
 COMMENT ON COLUMN campaign_members.lead_or_contact_id IS 'Salesforce LeadOrContactId (polymorphic)';
 COMMENT ON COLUMN campaign_members.lead_id IS 'Salesforce Lead Id';
+COMMENT ON COLUMN campaign_members.status_code IS 'Salesforce CampaignMember Status__c code (e.g. 1..6)';
+COMMENT ON COLUMN campaign_members.status_label IS 'Mapped readable status label from Status__c';
+COMMENT ON COLUMN campaign_members.selected_rewards IS 'Salesforce CampaignMember Selected_Rewards__c';
