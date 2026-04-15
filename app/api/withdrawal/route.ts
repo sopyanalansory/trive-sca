@@ -171,13 +171,17 @@ export async function POST(request: NextRequest) {
 
     // Verify platform belongs to user and get platform details
     const platformCheck = await pool.query(
-      'SELECT id, login_number, platform_registration_id FROM platforms WHERE id = $1 AND user_id = $2',
+      `SELECT id, login_number, platform_registration_id
+       FROM platforms
+       WHERE id = $1
+         AND user_id = $2
+         AND LOWER(TRIM(COALESCE(status, ''))) = 'enabled'`,
       [platformId, decoded.userId]
     );
 
     if (platformCheck.rows.length === 0) {
       return NextResponse.json(
-        { error: 'Platform tidak ditemukan atau tidak memiliki akses' },
+        { error: 'Platform tidak ditemukan, tidak memiliki akses, atau status akun tidak Enabled' },
         { status: 403 }
       );
     }
