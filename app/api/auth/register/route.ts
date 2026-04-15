@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase().trim(),
         phone: fullPhoneNumber,
         hasScaPassword: true,
-        phoneVerified: false,
+        phoneVerified: true,
         referralCode: referralCode?.trim() || '',
       };
 

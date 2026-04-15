@@ -540,3 +540,112 @@ Email ini dikirim otomatis dari sistem Trive Invest
     return { success: false, error: error.message };
   }
 }
+
+function escapeHtmlForEmail(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export interface ScaAccountRequestEmailData {
+  fullName: string;
+  email: string;
+  loginNumber: string;
+}
+
+/** Internal / dealing inbox — same recipient as deposit & withdrawal notifications. */
+export async function sendScaPasswordResetRequestNotificationEmail(
+  data: ScaAccountRequestEmailData
+) {
+  try {
+    const safeName = escapeHtmlForEmail(data.fullName);
+    const safeEmail = escapeHtmlForEmail(data.email);
+    const safeLogin = escapeHtmlForEmail(data.loginNumber);
+
+    const textContent = `A password reset request has been submitted with the following details:
+Name: ${data.fullName}
+Email: ${data.email}
+Login Number: ${data.loginNumber}
+------
+
+`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8" /></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>A password reset request has been submitted with the following details:</p>
+        <p><strong>Name:</strong> ${safeName}<br/>
+        <strong>Email:</strong> ${safeEmail}<br/>
+        <strong>Login Number:</strong> ${safeLogin}</p>
+        <p>------</p>
+      </body>
+      </html>
+    `;
+
+    const info = await transporter.sendMail({
+      from: '"No-reply Trive Invest" <no-reply@triveinvest.co.id>',
+      to: NOTIFICATION_EMAIL,
+      subject: "SCA Notification: Password Reset Request",
+      text: textContent,
+      html: htmlContent,
+    });
+
+    console.log("SCA password reset request notification sent:", info.messageId);
+    return { success: true as const, messageId: info.messageId };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error sending SCA password reset request email:", error);
+    return { success: false as const, error: message };
+  }
+}
+
+export async function sendScaClientAgreementRequestNotificationEmail(
+  data: ScaAccountRequestEmailData
+) {
+  try {
+    const safeName = escapeHtmlForEmail(data.fullName);
+    const safeEmail = escapeHtmlForEmail(data.email);
+    const safeLogin = escapeHtmlForEmail(data.loginNumber);
+
+    const textContent = `A client agreement request has been submitted with the following details:
+Name: ${data.fullName}
+Email: ${data.email}
+Login Number: ${data.loginNumber}
+`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8" /></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>A client agreement request has been submitted with the following details:</p>
+        <p><strong>Name:</strong> ${safeName}<br/>
+        <strong>Email:</strong> ${safeEmail}<br/>
+        <strong>Login Number:</strong> ${safeLogin}</p>
+      </body>
+      </html>
+    `;
+
+    const info = await transporter.sendMail({
+      from: '"No-reply Trive Invest" <no-reply@triveinvest.co.id>',
+      to: NOTIFICATION_EMAIL,
+      subject: "SCA Notification: Client Agreement Request",
+      text: textContent,
+      html: htmlContent,
+    });
+
+    console.log(
+      "SCA client agreement request notification sent:",
+      info.messageId
+    );
+    return { success: true as const, messageId: info.messageId };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error sending SCA client agreement request email:", error);
+    return { success: false as const, error: message };
+  }
+}
