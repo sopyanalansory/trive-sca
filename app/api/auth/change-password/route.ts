@@ -82,6 +82,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Prevent reusing the same password as current one
+    const isSameAsCurrentPassword = await verifyPassword(
+      newPassword,
+      user.password_hash
+    );
+    if (isSameAsCurrentPassword) {
+      return NextResponse.json(
+        { error: 'Kata sandi baru tidak boleh sama dengan kata sandi sebelumnya' },
+        { status: 400 }
+      );
+    }
+
     // Hash new password
     const passwordHash = await hashPassword(newPassword);
 
