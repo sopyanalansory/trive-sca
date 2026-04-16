@@ -24,7 +24,7 @@ describe("POST /api/internal/salesforce-users-sync", () => {
   it("returns Unauthorized without Basic auth", async () => {
     const res = await POST(
       postJson("/api/internal/salesforce-users-sync", {
-        contactOrLeadId: "003ABC",
+        clientId: "CLI-001",
       })
     );
     expect(res.status).toBe(200);
@@ -69,7 +69,7 @@ describe("POST /api/internal/salesforce-users-sync", () => {
     const res = await POST(
       postJson(
         "/api/internal/salesforce-users-sync",
-        { contactOrLeadId: "003NOTFOUND" },
+        { clientId: "CLI-404" },
         auth
       )
     );
@@ -87,10 +87,16 @@ describe("POST /api/internal/salesforce-users-sync", () => {
     });
 
     const payload = {
-      contactOrLeadId: "003Oj00000XXXXXX",
-      Email: "test@mail.com",
+      clientId: "CLI-001",
+      email: "test@mail.com",
+      phone: "00628121212129999",
+      contactId: "003Oj00000XXXXXX",
+      leadId: "003Oj00000XXXXXX",
       firstName: "John",
       lastName: "Doe",
+      accountId: "001Oj00000ABCDeIAL",
+      Flow__InterviewStatus: "Completed",
+      isRedFlag: false,
     };
     const res = await POST(
       postJson("/api/internal/salesforce-users-sync", payload, auth)
@@ -111,7 +117,7 @@ describe("POST /api/internal/salesforce-users-sync", () => {
     const res = await POST(
       postJson(
         "/api/internal/salesforce-users-sync",
-        { contactOrLeadId: "003Oj00000XXXXXX" },
+        { clientId: "CLI-001" },
         auth
       )
     );

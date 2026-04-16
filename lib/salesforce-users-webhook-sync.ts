@@ -42,24 +42,24 @@ function pickFullname(payload: SyncUsersPayload): string | null {
   return combined || null;
 }
 
-function getContactOrLeadId(payload: SyncUsersPayload): string | null {
+function getClientId(payload: SyncUsersPayload): string | null {
   return (
-    cleanString(payload.contactOrLeadId) ??
-    cleanString(payload.ContactOrLeadId) ??
-    cleanString(payload.LeadOrContactId) ??
-    cleanString(payload.leadOrContactId)
+    cleanString(payload.clientId) ??
+    cleanString(payload.client_id) ??
+    cleanString(payload.ClientId__c) ??
+    cleanString(payload.ClientId)
   );
 }
 
 export async function syncUserFromSalesforceWebhook(
   payload: SyncUsersPayload
 ): Promise<SyncSalesforceUserResult> {
-  const contactOrLeadId = getContactOrLeadId(payload);
-  if (!contactOrLeadId) {
+  const clientId = getClientId(payload);
+  if (!clientId) {
     return {
       ok: false,
       error: "VALIDATION",
-      message: "contactOrLeadId wajib diisi.",
+      message: "clientId wajib diisi.",
     };
   }
 
@@ -67,18 +67,18 @@ export async function syncUserFromSalesforceWebhook(
     `
     SELECT id
     FROM users
-    WHERE contact_id = $1 OR lead_id = $1
+    WHERE client_id = $1
     ORDER BY id DESC
     LIMIT 1
     `,
-    [contactOrLeadId]
+    [clientId]
   );
   const user = userResult.rows[0];
   if (!user) {
     return {
       ok: false,
       error: "USER_NOT_FOUND",
-      message: "User tidak ditemukan untuk contactOrLeadId tersebut.",
+      message: "User tidak ditemukan untuk client_id tersebut.",
     };
   }
 
@@ -118,10 +118,6 @@ export async function syncUserFromSalesforceWebhook(
     param += 1;
   }
 
-  const clientId =
-    cleanString(payload.clientId) ??
-    cleanString(payload.ClientId__c) ??
-    cleanString(payload.ClientId);
   if (clientId) push("client_id", clientId);
 
   const accountId =
@@ -133,6 +129,7 @@ export async function syncUserFromSalesforceWebhook(
   const leadId =
     cleanString(payload.leadId) ??
     cleanString(payload.LeadId) ??
+    cleanString(payload.lead_id) ??
     cleanString(payload.lead_or_contact_id);
   if (leadId) push("lead_id", leadId);
 
