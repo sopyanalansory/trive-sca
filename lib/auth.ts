@@ -2,8 +2,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
-const PASSWORD_RESET_JWT_EXPIRES_IN = '30m';
+const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '1d') as jwt.SignOptions['expiresIn'];
+const PASSWORD_RESET_JWT_EXPIRES_IN: jwt.SignOptions['expiresIn'] = '30m';
 
 export type JwtPayload = {
   userId: number;
