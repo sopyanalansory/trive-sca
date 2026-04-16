@@ -96,17 +96,56 @@ function mapSfCampaignMemberToDbRow(
 }
 
 export type UpdateExistingCampaignMembersResult = {
+  userFound: boolean;
   fetched: number;
   updated: number;
+  inserted: number;
   skipped: number;
   notInDatabase: number;
 };
 
-/** Webhook mode: update existing campaign_members only (never insert). */
-export async function updateExistingCampaignMembersFromSfRecords(
-  records: SfCampaignMemberRecord[]
+type UserRow = {
+  id: number;
+  client_id: string | null;
+  contact_id: string | null;
+  lead_id: string | null;
+};
+
+async function findUserByContactOrLeadId(
+  contactOrLeadId: string
+): Promise<UserRow | null> {
+  const result = await pool.query<UserRow>(
+    `
+    SELECT id, client_id, contact_id, lead_id
+    FROM users
+    WHERE contact_id = $1 OR lead_id = $1
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [contactOrLeadId]
+  );
+  return result.rows[0] ?? null;
+}
+
+/** Webhook mode: validate user first, then upsert campaign_members by Salesforce Campaign Member Id. */
+export async function upsertCampaignMembersFromSfRecords(
+  records: SfCampaignMemberRecord[],
+  contactOrLeadId: string
 ): Promise<UpdateExistingCampaignMembersResult> {
+  const user = await findUserByContactOrLeadId(contactOrLeadId);
+  if (!user) {
+    return {
+      userFound: false,
+      fetched: records.length,
+      updated: 0,
+      inserted: 0,
+      skipped: records.length,
+      notInDatabase: 0,
+    };
+  }
+
   let updated = 0;
+  let inserted = 0;
   let skipped = 0;
   let notInDatabase = 0;
 
@@ -117,7 +156,7 @@ export async function updateExistingCampaignMembersFromSfRecords(
       continue;
     }
 
-    const result = await pool.query(
+    const updateResult = await pool.query(
       `
       UPDATE campaign_members cm
       SET
@@ -141,17 +180,72 @@ export async function updateExistingCampaignMembersFromSfRecords(
       ]
     );
 
-    const n = result.rowCount ?? 0;
-    if (n === 0) {
-      notInDatabase += 1;
-    } else {
+    const n = updateResult.rowCount ?? 0;
+    if (n > 0) {
       updated += 1;
+      continue;
+    }
+
+    notInDatabase += 1;
+    if (!row.campaignIdFromSalesforce) {
+      skipped += 1;
+      continue;
+    }
+
+    const insertResult = await pool.query(
+      `
+      INSERT INTO campaign_members (
+        campaign_id,
+        campaign_id_from_salesforce,
+        campaign_member_id_from_salesforce,
+        client_id,
+        contact_id,
+        lead_or_contact_id,
+        lead_id,
+        status_code,
+        status_label,
+        selected_rewards
+      )
+      SELECT
+        c.id,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9
+      FROM campaigns c
+      WHERE c.campaign_id_from_salesforce::text = $10::text
+      `,
+      [
+        row.campaignIdFromSalesforce,
+        row.campaignMemberIdFromSalesforce,
+        user.client_id,
+        user.contact_id,
+        contactOrLeadId,
+        user.lead_id,
+        row.statusCode,
+        row.statusLabel,
+        row.selectedRewards,
+        row.campaignIdFromSalesforce,
+      ]
+    );
+
+    if ((insertResult.rowCount ?? 0) > 0) {
+      inserted += 1;
+    } else {
+      skipped += 1;
     }
   }
 
   return {
+    userFound: true,
     fetched: records.length,
     updated,
+    inserted,
     skipped,
     notInDatabase,
   };

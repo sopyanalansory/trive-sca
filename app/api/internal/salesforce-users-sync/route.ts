@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  extractCampaignMemberArrayFromWebhookPayload,
-  upsertCampaignMembersFromSfRecords,
-} from "@/lib/salesforce-campaign-members-webhook-sync";
 import { apiLogger, logRouteError } from "@/lib/logger";
+import { syncUserFromSalesforceWebhook } from "@/lib/salesforce-users-webhook-sync";
 
-const log = apiLogger("internal:salesforce-campaign-members-sync");
+const log = apiLogger("internal:salesforce-users-sync");
 
 export const runtime = "nodejs";
-
-function cleanString(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const trimmed = v.trim();
-  return trimmed.length ? trimmed : null;
-}
 
 function basicAuthCredentials(): { user: string; pass: string } | null {
   const user = process.env.SALESFORCE_PLATFORM_SYNC_USER?.trim();
@@ -26,16 +17,12 @@ function basicAuthCredentials(): { user: string; pass: string } | null {
 
 function isAuthorized(request: NextRequest): boolean {
   const creds = basicAuthCredentials();
-  if (!creds) {
-    return false;
-  }
+  if (!creds) return false;
 
   const authHeader =
     request.headers.get("authorization") ??
     request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Basic ")) {
-    return false;
-  }
+  if (!authHeader?.startsWith("Basic ")) return false;
 
   try {
     const decoded = Buffer.from(authHeader.slice(6), "base64").toString(
@@ -69,48 +56,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const records = extractCampaignMemberArrayFromWebhookPayload(body);
-    if (records.length === 0) {
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
       return NextResponse.json(
         {
           success: false,
           error: "VALIDATION",
-          message:
-            "Payload harus berisi campaignMembers: array objek campaign member, array objek, atau satu objek dengan field Id.",
+          message: "Body harus berupa JSON object.",
         },
         { status: 200 }
       );
     }
 
-    const bodyObj =
-      body && typeof body === "object" ? (body as Record<string, unknown>) : {};
-    const contactOrLeadId =
-      cleanString(bodyObj.contactOrLeadId) ??
-      cleanString(bodyObj.LeadOrContactId) ??
-      cleanString(bodyObj.ContactOrLeadId);
-    if (!contactOrLeadId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "VALIDATION",
-          message: "Payload wajib berisi contactOrLeadId.",
-        },
-        { status: 200 }
-      );
-    }
-
-    const result = await upsertCampaignMembersFromSfRecords(
-      records,
-      contactOrLeadId
+    const result = await syncUserFromSalesforceWebhook(
+      body as Record<string, unknown>
     );
-    if (!result.userFound) {
+    if (!result.ok) {
       return NextResponse.json(
         {
           success: false,
-          error: "USER_NOT_FOUND",
-          message:
-            "User tidak ditemukan berdasarkan contactOrLeadId (cek users.contact_id/lead_id).",
-          contactOrLeadId,
+          error: result.error,
+          message: result.message,
         },
         { status: 200 }
       );
@@ -118,25 +83,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      contactOrLeadId,
-      fetched: result.fetched,
-      updated: result.updated,
-      inserted: result.inserted,
-      skipped: result.skipped,
-      notInDatabase: result.notInDatabase,
+      action: result.action,
+      userId: result.userId,
+      message: "User synced successfully",
     });
   } catch (error: unknown) {
-    logRouteError(
-      log,
-      request,
-      error,
-      "Salesforce campaign members webhook update failed"
-    );
+    logRouteError(log, request, error, "Salesforce users webhook sync failed");
     return NextResponse.json(
       {
         success: false,
         error: "INTERNAL_ERROR",
-        message: "Gagal menyimpan data campaign members.",
+        message: "An error occurred while syncing users table",
       },
       { status: 200 }
     );

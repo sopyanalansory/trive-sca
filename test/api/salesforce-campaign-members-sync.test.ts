@@ -9,12 +9,12 @@ vi.mock("@/lib/salesforce-campaign-members-webhook-sync", async () => {
     );
   return {
     ...actual,
-    updateExistingCampaignMembersFromSfRecords: vi.fn(),
+    upsertCampaignMembersFromSfRecords: vi.fn(),
   };
 });
 
 import { POST } from "@/app/api/internal/salesforce-campaign-members-sync/route";
-import { updateExistingCampaignMembersFromSfRecords } from "@/lib/salesforce-campaign-members-webhook-sync";
+import { upsertCampaignMembersFromSfRecords } from "@/lib/salesforce-campaign-members-webhook-sync";
 
 const auth = basicAuthHeader(
   "test_platform_sync_user",
@@ -25,7 +25,7 @@ describe("POST /api/internal/salesforce-campaign-members-sync", () => {
   beforeEach(() => {
     process.env.SALESFORCE_PLATFORM_SYNC_USER = "test_platform_sync_user";
     process.env.SALESFORCE_PLATFORM_SYNC_PASSWORD = "test_platform_sync_secret";
-    vi.mocked(updateExistingCampaignMembersFromSfRecords).mockReset();
+    vi.mocked(upsertCampaignMembersFromSfRecords).mockReset();
   });
 
   afterEach(() => {
@@ -110,9 +110,11 @@ describe("POST /api/internal/salesforce-campaign-members-sync", () => {
   });
 
   it("updates from campaignMembers array and returns counts", async () => {
-    vi.mocked(updateExistingCampaignMembersFromSfRecords).mockResolvedValueOnce({
+    vi.mocked(upsertCampaignMembersFromSfRecords).mockResolvedValueOnce({
+      userFound: true,
       fetched: 1,
       updated: 1,
+      inserted: 0,
       skipped: 0,
       notInDatabase: 0,
     });
@@ -127,7 +129,7 @@ describe("POST /api/internal/salesforce-campaign-members-sync", () => {
     const res = await POST(
       postJson(
         "/api/internal/salesforce-campaign-members-sync",
-        { campaignMembers: [member] },
+        { campaignMembers: [member], contactOrLeadId: "003Oj00000XXXXXX" },
         auth
       )
     );
@@ -136,38 +138,90 @@ describe("POST /api/internal/salesforce-campaign-members-sync", () => {
     expect(json.success).toBe(true);
     expect(json.updated).toBe(1);
     expect(json.notInDatabase).toBe(0);
-    expect(updateExistingCampaignMembersFromSfRecords).toHaveBeenCalledWith([
-      member,
-    ]);
+    expect(json.inserted).toBe(0);
+    expect(upsertCampaignMembersFromSfRecords).toHaveBeenCalledWith(
+      [member],
+      "003Oj00000XXXXXX"
+    );
   });
 
   it("accepts root-level array payload", async () => {
-    vi.mocked(updateExistingCampaignMembersFromSfRecords).mockResolvedValueOnce({
+    vi.mocked(upsertCampaignMembersFromSfRecords).mockResolvedValueOnce({
+      userFound: true,
       fetched: 1,
       updated: 1,
+      inserted: 0,
       skipped: 0,
       notInDatabase: 0,
     });
 
     const member = { Id: "00vOj00000t5fm1IAA", CampaignId: "701Oj00000ABCDeIAL" };
     const res = await POST(
-      postJson("/api/internal/salesforce-campaign-members-sync", [member], auth)
+      postJson(
+        "/api/internal/salesforce-campaign-members-sync",
+        { campaignMembers: [member], contactOrLeadId: "003Oj00000YYYYYY" },
+        auth
+      )
     );
     expect(res.status).toBe(200);
-    expect(updateExistingCampaignMembersFromSfRecords).toHaveBeenCalledWith([
-      member,
-    ]);
+    expect(upsertCampaignMembersFromSfRecords).toHaveBeenCalledWith(
+      [member],
+      "003Oj00000YYYYYY"
+    );
+  });
+
+  it("returns validation when contactOrLeadId is missing", async () => {
+    const member = { Id: "00vOj00000t5fm1IAA", CampaignId: "701Oj00000ABCDeIAL" };
+    const res = await POST(
+      postJson(
+        "/api/internal/salesforce-campaign-members-sync",
+        { campaignMembers: [member] },
+        auth
+      )
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.error).toBe("VALIDATION");
+    expect(upsertCampaignMembersFromSfRecords).not.toHaveBeenCalled();
+  });
+
+  it("returns USER_NOT_FOUND when user lookup fails", async () => {
+    vi.mocked(upsertCampaignMembersFromSfRecords).mockResolvedValueOnce({
+      userFound: false,
+      fetched: 1,
+      updated: 0,
+      inserted: 0,
+      skipped: 1,
+      notInDatabase: 0,
+    });
+
+    const member = { Id: "00vOj00000t5fm1IAA", CampaignId: "701Oj00000ABCDeIAL" };
+    const res = await POST(
+      postJson(
+        "/api/internal/salesforce-campaign-members-sync",
+        { campaignMembers: [member], contactOrLeadId: "003Oj00000ZZZZZZ" },
+        auth
+      )
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.error).toBe("USER_NOT_FOUND");
   });
 
   it("returns 200 when update throws", async () => {
-    vi.mocked(updateExistingCampaignMembersFromSfRecords).mockRejectedValueOnce(
+    vi.mocked(upsertCampaignMembersFromSfRecords).mockRejectedValueOnce(
       new Error("db error")
     );
 
     const res = await POST(
       postJson(
         "/api/internal/salesforce-campaign-members-sync",
-        { campaignMembers: [{ Id: "00vXXX" }] },
+        {
+          campaignMembers: [{ Id: "00vXXX" }],
+          contactOrLeadId: "003Oj00000XXXXXX",
+        },
         auth
       )
     );
