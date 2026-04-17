@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
 import { changeMetaUserPassword, MetaManagerError } from '@/lib/metamanager';
-import { sendMt5PasswordChangedEmail } from '@/lib/email';
+// import { sendMt5PasswordChangedEmail } from '@/lib/email';
 
 const log = apiLogger('accounts:reset-password');
 
@@ -104,15 +104,6 @@ export async function POST(request: NextRequest) {
     }
 
     const platform = platformResult.rows[0];
-    const platformType = String(platform.type ?? '')
-      .trim()
-      .toLowerCase();
-    if (platformType !== 'demo') {
-      return NextResponse.json(
-        { error: 'Reset kata sandi via Meta hanya berlaku untuk akun demo' },
-        { status: 400 }
-      );
-    }
     const loginNumber = String(platform.login_number ?? '').trim();
     if (!loginNumber) {
       return NextResponse.json(
@@ -131,7 +122,7 @@ export async function POST(request: NextRequest) {
       if (error instanceof MetaManagerError) {
         const message =
           error.statusCode >= 500
-            ? 'Gagal mengubah kata sandi akun demo. Silakan coba lagi.'
+            ? 'Gagal mengubah kata sandi akun. Silakan coba lagi.'
             : error.message;
         log.warn(
           {
@@ -158,49 +149,49 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const userEmail = String(platform.user_email ?? '').trim();
-    if (userEmail) {
-      const emailResult = await sendMt5PasswordChangedEmail({
-        name: String(platform.user_name ?? '').trim() || 'Nasabah',
-        email: userEmail,
-        loginNumber,
-        password,
-      });
-
-      if (!emailResult.success) {
-        log.warn(
-          {
-            ...requestLogFields(request),
-            userId: decoded.userId,
-            platformId: pid,
-            loginNumber,
-            detail: emailResult.error,
-          },
-          'MT5 password changed email failed'
-        );
-        return NextResponse.json(
-          {
-            error:
-              'Kata sandi berhasil diubah, tetapi email notifikasi gagal dikirim.',
-          },
-          { status: 500 }
-        );
-      }
-    } else {
-      log.warn(
-        {
-          ...requestLogFields(request),
-          userId: decoded.userId,
-          platformId: pid,
-          loginNumber,
-        },
-        'MT5 password changed email skipped: user email is empty'
-      );
-    }
+    // const userEmail = String(platform.user_email ?? '').trim();
+    // if (userEmail) {
+    //   const emailResult = await sendMt5PasswordChangedEmail({
+    //     name: String(platform.user_name ?? '').trim() || 'Nasabah',
+    //     email: userEmail,
+    //     loginNumber,
+    //     password,
+    //   });
+    //
+    //   if (!emailResult.success) {
+    //     log.warn(
+    //       {
+    //         ...requestLogFields(request),
+    //         userId: decoded.userId,
+    //         platformId: pid,
+    //         loginNumber,
+    //         detail: emailResult.error,
+    //       },
+    //       'MT5 password changed email failed'
+    //     );
+    //     return NextResponse.json(
+    //       {
+    //         error:
+    //           'Kata sandi berhasil diubah, tetapi email notifikasi gagal dikirim.',
+    //       },
+    //       { status: 500 }
+    //     );
+    //   }
+    // } else {
+    //   log.warn(
+    //     {
+    //       ...requestLogFields(request),
+    //       userId: decoded.userId,
+    //       platformId: pid,
+    //       loginNumber,
+    //     },
+    //     'MT5 password changed email skipped: user email is empty'
+    //   );
+    // }
 
     return NextResponse.json(
       { 
-        message: 'Kata sandi akun demo berhasil diubah',
+        message: 'Kata sandi akun berhasil diubah',
         loginNumber
       },
       { status: 200 }
