@@ -1,4 +1,8 @@
 import nodemailer from 'nodemailer';
+import {
+  Mt5PasswordChangedEmailData,
+  renderMt5PasswordChangedEmail,
+} from "@/lib/email-templates/mt5-password-changed";
 
 // Create a transporter using Outlook SMTP
 const transporter = nodemailer.createTransport({
@@ -561,7 +565,6 @@ export async function sendScaPasswordResetRequestNotificationEmail(
 ) {
   try {
     const safeName = escapeHtmlForEmail(data.fullName);
-    const safeEmail = escapeHtmlForEmail(data.email);
     const safeLogin = escapeHtmlForEmail(data.loginNumber);
 
     const textContent = `A password reset request has been submitted with the following details:
@@ -646,6 +649,32 @@ Login Number: ${data.loginNumber}
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Error sending SCA client agreement request email:", error);
+    return { success: false as const, error: message };
+  }
+}
+
+export async function sendMt5PasswordChangedEmail(
+  data: Mt5PasswordChangedEmailData
+) {
+  try {
+    const rendered = renderMt5PasswordChangedEmail(data);
+    const recipients = [data.email, NOTIFICATION_EMAIL].filter(
+      (v, i, arr) => v && arr.indexOf(v) === i
+    );
+    
+    const info = await transporter.sendMail({
+      from: '"No-reply Trive Invest" <no-reply@triveinvest.co.id>',
+      to: recipients.join(", "),
+      subject: "Perubahan Kata Sandi MetaTrader 5 Anda",
+      text: rendered.text,
+      html: rendered.html,
+    });
+
+    console.log("MT5 password changed email sent:", info.messageId);
+    return { success: true as const, messageId: info.messageId };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error sending MT5 password changed email:", error);
     return { success: false as const, error: message };
   }
 }

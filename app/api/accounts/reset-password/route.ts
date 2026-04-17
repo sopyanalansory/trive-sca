@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
-import { sendResetPasswordNotificationEmail } from '@/lib/email';
 import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
+import { changeMetaUserPassword, MetaManagerError } from '@/lib/metamanager';
+import { sendMt5PasswordChangedEmail } from '@/lib/email';
 
 const log = apiLogger('accounts:reset-password');
 
@@ -29,11 +30,52 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { platformId } = body;
+    const { platformId, newPassword, confirmPassword } = body as {
+      platformId?: unknown;
+      newPassword?: unknown;
+      confirmPassword?: unknown;
+    };
 
-    if (!platformId) {
+    const pid = Number(platformId);
+    if (!Number.isFinite(pid) || pid <= 0) {
       return NextResponse.json(
         { error: 'Platform ID wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    const password =
+      typeof newPassword === 'string' ? newPassword.trim() : '';
+    const confirmedPassword =
+      typeof confirmPassword === 'string' ? confirmPassword.trim() : '';
+    if (!password || !confirmedPassword) {
+      return NextResponse.json(
+        { error: 'Kata sandi baru dan konfirmasi wajib diisi' },
+        { status: 400 }
+      );
+    }
+    if (password !== confirmedPassword) {
+      return NextResponse.json(
+        { error: 'Konfirmasi kata sandi tidak sesuai' },
+        { status: 400 }
+      );
+    }
+    if (password.length < 8 || password.length > 16) {
+      return NextResponse.json(
+        { error: 'Kata sandi harus terdiri dari 8-16 karakter' },
+        { status: 400 }
+      );
+    }
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+    if (!hasLowerCase || !hasUpperCase || !hasNumber || !hasSpecialChar) {
+      return NextResponse.json(
+        {
+          error:
+            'Kata sandi harus berisi huruf kecil, huruf besar, angka, dan karakter khusus',
+        },
         { status: 400 }
       );
     }
@@ -42,16 +84,16 @@ export async function POST(request: NextRequest) {
     const platformResult = await pool.query(
       `SELECT 
         p.id,
+        p.type,
         p.login_number,
         p.server_name,
-        p.account_type,
         u.id as user_id,
         u.fullname as user_name,
         u.email as user_email
       FROM platforms p
       JOIN users u ON p.user_id = u.id
       WHERE p.id = $1 AND p.user_id = $2`,
-      [platformId, decoded.userId]
+      [pid, decoded.userId]
     );
 
     if (platformResult.rows.length === 0) {
@@ -62,33 +104,104 @@ export async function POST(request: NextRequest) {
     }
 
     const platform = platformResult.rows[0];
-
-    // Send email notification
-    const emailResult = await sendResetPasswordNotificationEmail({
-      userId: platform.user_id,
-      userName: platform.user_name,
-      userEmail: platform.user_email,
-      platformId: platform.id,
-      loginNumber: platform.login_number,
-      serverName: platform.server_name,
-      accountType: platform.account_type,
-    });
-
-    if (!emailResult.success) {
-      log.warn(
-        { ...requestLogFields(request), detail: emailResult.error },
-        'Platform reset password notification email failed'
-      );
+    const platformType = String(platform.type ?? '')
+      .trim()
+      .toLowerCase();
+    if (platformType !== 'demo') {
       return NextResponse.json(
-        { error: 'Gagal mengirim email notifikasi. Silakan coba lagi.' },
-        { status: 500 }
+        { error: 'Reset kata sandi via Meta hanya berlaku untuk akun demo' },
+        { status: 400 }
+      );
+    }
+    const loginNumber = String(platform.login_number ?? '').trim();
+    if (!loginNumber) {
+      return NextResponse.json(
+        { error: 'Login number akun tidak tersedia' },
+        { status: 400 }
+      );
+    }
+
+    try {
+      await changeMetaUserPassword({
+        login: loginNumber,
+        password,
+        type: 'main',
+      });
+    } catch (error: unknown) {
+      if (error instanceof MetaManagerError) {
+        const message =
+          error.statusCode >= 500
+            ? 'Gagal mengubah kata sandi akun demo. Silakan coba lagi.'
+            : error.message;
+        log.warn(
+          {
+            ...requestLogFields(request),
+            userId: decoded.userId,
+            platformId: pid,
+            loginNumber,
+            status: error.statusCode,
+            detail: error.detail,
+          },
+          'MetaManager reset password failed'
+        );
+        if (error.statusCode === 500) {
+          log.error(
+            { ...requestLogFields(request), userId: decoded.userId },
+            'MetaManager credentials/configuration is missing'
+          );
+        }
+        return NextResponse.json(
+          { error: message },
+          { status: error.statusCode === 500 ? 500 : 502 }
+        );
+      }
+      throw error;
+    }
+
+    const userEmail = String(platform.user_email ?? '').trim();
+    if (userEmail) {
+      const emailResult = await sendMt5PasswordChangedEmail({
+        name: String(platform.user_name ?? '').trim() || 'Nasabah',
+        email: userEmail,
+        loginNumber,
+        password,
+      });
+
+      if (!emailResult.success) {
+        log.warn(
+          {
+            ...requestLogFields(request),
+            userId: decoded.userId,
+            platformId: pid,
+            loginNumber,
+            detail: emailResult.error,
+          },
+          'MT5 password changed email failed'
+        );
+        return NextResponse.json(
+          {
+            error:
+              'Kata sandi berhasil diubah, tetapi email notifikasi gagal dikirim.',
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      log.warn(
+        {
+          ...requestLogFields(request),
+          userId: decoded.userId,
+          platformId: pid,
+          loginNumber,
+        },
+        'MT5 password changed email skipped: user email is empty'
       );
     }
 
     return NextResponse.json(
       { 
-        message: 'Request reset password berhasil dikirim ke email notification',
-        emailSent: true
+        message: 'Kata sandi akun demo berhasil diubah',
+        loginNumber
       },
       { status: 200 }
     );
