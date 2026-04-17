@@ -565,6 +565,7 @@ export async function sendScaPasswordResetRequestNotificationEmail(
 ) {
   try {
     const safeName = escapeHtmlForEmail(data.fullName);
+    const safeEmail = escapeHtmlForEmail(data.email);
     const safeLogin = escapeHtmlForEmail(data.loginNumber);
 
     const textContent = `A password reset request has been submitted with the following details:
