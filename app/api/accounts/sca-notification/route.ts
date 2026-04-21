@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import OSS from "ali-oss";
 import pool from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
 import {
@@ -13,6 +14,61 @@ type NotificationType = "password_reset" | "client_agreement";
 
 function isNotificationType(v: unknown): v is NotificationType {
   return v === "password_reset" || v === "client_agreement";
+}
+
+function normalizeObjectKey(input: string): string {
+  return input.replace(/^\/+/, "").trim();
+}
+
+function getClientAgreementPrefixes(): string[] {
+  const raw = String(process.env.OSS_CLIENT_AGREEMENT_PREFIXES ?? "").trim();
+  if (!raw) return ["Migrasi Agreement"];
+  const parts = raw
+    .split(",")
+    .map((item) => normalizeObjectKey(item))
+    .filter(Boolean);
+  return parts.length > 0 ? parts : [""];
+}
+
+function buildLoginPrefixes(loginNumber: string): string[] {
+  const normalizedLogin = loginNumber.trim();
+  if (!normalizedLogin) return [];
+  return getClientAgreementPrefixes().map((prefix) => {
+    if (!prefix) return normalizedLogin;
+    return `${prefix.replace(/\/+$/, "")}/${normalizedLogin}`;
+  });
+}
+
+function createOssClient(): OSS | null {
+  const region = String(process.env.OSS_REGION ?? "").trim();
+  const bucket = normalizeObjectKey(String(process.env.OSS_BUCKET ?? "").trim());
+  const accessKeyId = String(process.env.OSS_ACCESS_KEY_ID ?? "").trim();
+  const accessKeySecret = String(process.env.OSS_ACCESS_KEY_SECRET ?? "").trim();
+  if (!region || !bucket || !accessKeyId || !accessKeySecret) return null;
+
+  return new OSS({
+    region,
+    accessKeyId,
+    accessKeySecret,
+    bucket,
+    timeout: "20s",
+  });
+}
+
+async function findClientAgreementObjectKey(
+  client: OSS,
+  loginNumber: string
+): Promise<string | null> {
+
+  for (const prefix of buildLoginPrefixes(loginNumber)) {
+    const listed = await client.listV2({
+      prefix,
+      "max-keys": 1,
+    });
+    const first = listed.objects?.[0];
+    if (first?.name) return first.name;
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -100,6 +156,41 @@ export async function POST(request: NextRequest) {
       email: String(row.user_email || "").trim() || "—",
       loginNumber: String(row.login_number ?? "").trim() || "—",
     };
+
+    if (notificationType === "client_agreement") {
+      try {
+        const client = createOssClient();
+        const key = client
+          ? await findClientAgreementObjectKey(client, payload.loginNumber)
+          : null;
+        if (key) {
+          const expiresInSeconds = Number(
+            process.env.OSS_CLIENT_AGREEMENT_URL_EXPIRES ?? 600
+          );
+          const fileUrl = client!.signatureUrl(key, {
+            expires: Number.isFinite(expiresInSeconds)
+              ? Math.max(60, Math.floor(expiresInSeconds))
+              : 600,
+          });
+          return NextResponse.json(
+            {
+              ok: true,
+              delivery: "cdn",
+              fileUrl,
+              objectKey: key,
+              message: "Client agreement found in OSS",
+            },
+            { status: 200 }
+          );
+        }
+      } catch (error: unknown) {
+        const detail = error instanceof Error ? error.message : String(error);
+        log.warn(
+          { ...requestLogFields(request), detail },
+          "Unable to check client agreement in OSS, fallback to email"
+        );
+      }
+    }
 
     const emailResult =
       notificationType === "password_reset"
