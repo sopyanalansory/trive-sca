@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
-import { apiLogger, logRouteError } from '@/lib/logger';
+import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
 import { fetchAndPersistPlatformsForUser } from '@/lib/salesforce-platforms';
 import { checkMetaUserBalance } from '@/lib/metamanager';
 
@@ -220,10 +220,14 @@ export async function GET(request: NextRequest) {
             ...metrics,
           };
         } catch (error: unknown) {
-          log.warn('Failed to fetch realtime meta metrics for account', {
-            login,
-            error: error instanceof Error ? error.message : String(error),
-          });
+          log.warn(
+            {
+              ...requestLogFields(request),
+              login,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to fetch realtime meta metrics for account'
+          );
           return {
             ...account,
             balance: null,
