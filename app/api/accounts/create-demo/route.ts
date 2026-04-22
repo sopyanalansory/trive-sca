@@ -39,6 +39,15 @@ function pickMetaLogin(answer: unknown): string {
   return String(candidate).trim();
 }
 
+function isPasswordValid(password: string): boolean {
+  if (password.length < 8 || password.length > 16) return false;
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+  return hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -73,6 +82,16 @@ export async function POST(request: NextRequest) {
         {
           error:
             "group, name, leverage, passMain, dan passInvestor wajib diisi",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!isPasswordValid(passMain) || !isPasswordValid(passInvestor)) {
+      return NextResponse.json(
+        {
+          error:
+            "Kata sandi harus terdiri dari 8-16 karakter dan berisi huruf kecil, huruf besar, angka, dan karakter khusus",
         },
         { status: 400 }
       );
