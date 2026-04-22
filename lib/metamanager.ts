@@ -350,10 +350,11 @@ export type AddMetaUserInput = {
 };
 
 export async function addMetaUser(input: AddMetaUserInput): Promise<unknown> {
-  const params = new URLSearchParams();
-  params.append("group", String(input.group));
-  params.append("name", String(input.name));
-  params.append("leverage", String(input.leverage));
+  const query = [
+    `group=${encodeURIComponent(String(input.group))}`,
+    `name=${encodeURIComponent(String(input.name))}`,
+    `leverage=${encodeURIComponent(String(input.leverage))}`,
+  ].join("&");
 
   const body: Record<string, unknown> = {
     PassMain: input.passMain,
@@ -372,7 +373,7 @@ export async function addMetaUser(input: AddMetaUserInput): Promise<unknown> {
   if (input.agent !== undefined) body.Agent = input.agent;
 
   return await executeAuthenticatedMetaRequest({
-    path: `/api/user/add?${params.toString()}`,
+    path: `/api/user/add?${query}`,
     method: "POST",
     body,
     context: "add user",
