@@ -3,8 +3,75 @@ import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { apiLogger, logRouteError } from '@/lib/logger';
 import { fetchAndPersistPlatformsForUser } from '@/lib/salesforce-platforms';
+import { checkMetaUserBalance } from '@/lib/metamanager';
 
 const log = apiLogger('accounts');
+
+type MetaAccountPayload = Record<string, unknown>;
+
+function pickFirstDefined(
+  obj: MetaAccountPayload,
+  keys: string[]
+): unknown {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      return obj[key];
+    }
+  }
+  return undefined;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const normalized = trimmed.replace(/,/g, '');
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function mapMetaRealtimeMetrics(raw: unknown): {
+  balance: number | null;
+  equity: number | null;
+  pnl: number | null;
+  freeMargin: number | null;
+} {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      balance: null,
+      equity: null,
+      pnl: null,
+      freeMargin: null,
+    };
+  }
+
+  const payload = raw as MetaAccountPayload;
+  const balance = toNullableNumber(
+    pickFirstDefined(payload, ['Balance', 'balance'])
+  );
+  const equity = toNullableNumber(
+    pickFirstDefined(payload, ['Equity', 'equity'])
+  );
+  const pnlFromPayload = toNullableNumber(
+    pickFirstDefined(payload, ['Profit', 'profit', 'Floating', 'floating', 'PnL', 'pnl'])
+  );
+  const freeMargin = toNullableNumber(
+    pickFirstDefined(payload, ['MarginFree', 'marginFree', 'FreeMargin', 'freeMargin'])
+  );
+  const pnl =
+    pnlFromPayload ??
+    (balance !== null && equity !== null ? equity - balance : null);
+
+  return {
+    balance,
+    equity,
+    pnl,
+    freeMargin,
+  };
+}
 
 function resolvePlatformName(
   serverName: string | null | undefined,
@@ -112,7 +179,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const accounts = result.rows.map((row) => ({
+    const baseAccounts = result.rows.map((row) => ({
       id: row.id,
       type: row.type || 'Demo',
       accountType: row.account_type || '-',
@@ -127,6 +194,46 @@ export async function GET(request: NextRequest) {
       swapFree: row.swap_free ?? null,
       registrationDate: row.registration_date ?? null,
     }));
+
+    const accounts = await Promise.all(
+      baseAccounts.map(async (account) => {
+        const login =
+          typeof account.login === 'string'
+            ? account.login.trim()
+            : String(account.login ?? '').trim();
+
+        if (!login) {
+          return {
+            ...account,
+            balance: null,
+            equity: null,
+            pnl: null,
+            freeMargin: null,
+          };
+        }
+
+        try {
+          const metaData = await checkMetaUserBalance(login);
+          const metrics = mapMetaRealtimeMetrics(metaData);
+          return {
+            ...account,
+            ...metrics,
+          };
+        } catch (error: unknown) {
+          log.warn('Failed to fetch realtime meta metrics for account', {
+            login,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return {
+            ...account,
+            balance: null,
+            equity: null,
+            pnl: null,
+            freeMargin: null,
+          };
+        }
+      })
+    );
 
     return NextResponse.json(
       { accounts },
