@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { apiLogger, logRouteError, requestLogFields } from '@/lib/logger';
 import { fetchAndPersistPlatformsForUser } from '@/lib/salesforce-platforms';
-import { checkMetaUserBalance } from '@/lib/metamanager';
+import { getMetaUserAccount } from '@/lib/metamanager';
 
 const log = apiLogger('accounts');
 
@@ -49,9 +49,12 @@ function mapMetaRealtimeMetrics(raw: unknown): {
   }
 
   const payload = raw as MetaAccountPayload;
+  const nestedBalanceUser = toNullableNumber(
+    (payload.balance as Record<string, unknown> | undefined)?.user
+  );
   const balance = toNullableNumber(
     pickFirstDefined(payload, ['Balance', 'balance'])
-  );
+  ) ?? nestedBalanceUser;
   const equity = toNullableNumber(
     pickFirstDefined(payload, ['Equity', 'equity'])
   );
@@ -213,7 +216,7 @@ export async function GET(request: NextRequest) {
         }
 
         try {
-          const metaData = await checkMetaUserBalance(login);
+          const metaData = await getMetaUserAccount(login);
           const metrics = mapMetaRealtimeMetrics(metaData);
           return {
             ...account,
