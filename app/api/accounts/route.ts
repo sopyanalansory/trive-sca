@@ -6,6 +6,11 @@ import { fetchAndPersistPlatformsForUser } from '@/lib/salesforce-platforms';
 import { getMetaUserAccount } from '@/lib/metamanager';
 
 const log = apiLogger('accounts');
+const ACCOUNTS_CACHE_TTL_MS = 60_000;
+const accountsCache = new Map<
+  number,
+  { expiresAt: number; accounts: unknown[] }
+>();
 
 type MetaAccountPayload = Record<string, unknown>;
 
@@ -106,6 +111,12 @@ export async function GET(request: NextRequest) {
         { error: 'Token tidak valid atau sudah kadaluarsa' },
         { status: 401 }
       );
+    }
+
+    const now = Date.now();
+    const cached = accountsCache.get(decoded.userId);
+    if (cached && cached.expiresAt > now) {
+      return NextResponse.json({ accounts: cached.accounts }, { status: 200 });
     }
 
     // Get platform accounts for the user
@@ -241,6 +252,11 @@ export async function GET(request: NextRequest) {
         }
       })
     );
+
+    accountsCache.set(decoded.userId, {
+      accounts,
+      expiresAt: Date.now() + ACCOUNTS_CACHE_TTL_MS,
+    });
 
     return NextResponse.json(
       { accounts },
