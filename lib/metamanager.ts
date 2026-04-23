@@ -380,3 +380,41 @@ export async function addMetaUser(input: AddMetaUserInput): Promise<unknown> {
   });
 }
 
+export async function applyMetaTradeBalance(options: {
+  login: string;
+  type: 2 | 3 | 4 | 5 | 6;
+  balance: number;
+  comment: string;
+  checkMargin?: 0 | 1;
+}): Promise<unknown> {
+  const { login, type, balance, comment, checkMargin } = options;
+  const normalizedLogin = String(login).trim();
+  const normalizedComment = String(comment).trim();
+
+  if (!normalizedLogin) {
+    throw new MetaManagerError("apply trade balance: login is required", 400);
+  }
+  if (!Number.isFinite(balance)) {
+    throw new MetaManagerError("apply trade balance: balance is invalid", 400);
+  }
+  if (!normalizedComment) {
+    throw new MetaManagerError("apply trade balance: comment is required", 400);
+  }
+
+  const params = [
+    `login=${encodeURIComponent(normalizedLogin)}`,
+    `type=${encodeURIComponent(String(type))}`,
+    `balance=${encodeURIComponent(String(balance))}`,
+    `comment=${encodeURIComponent(normalizedComment.slice(0, 32))}`,
+  ];
+  if (checkMargin === 0 || checkMargin === 1) {
+    params.push(`check_margin=${checkMargin}`);
+  }
+
+  return await executeAuthenticatedMetaRequest({
+    path: `/api/trade/balance?${params.join("&")}`,
+    method: "POST",
+    context: "apply trade balance",
+  });
+}
+
