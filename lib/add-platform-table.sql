@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS platforms (
   fix_rate VARCHAR(50),
   swap_free VARCHAR(10) NOT NULL DEFAULT 'Tidak',
   type VARCHAR(20) DEFAULT 'Live',
+  provision_status VARCHAR(64),
+  provision_error JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -27,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_platforms_login_number ON platforms(login_number)
 CREATE INDEX IF NOT EXISTS idx_platforms_status ON platforms(status);
 CREATE INDEX IF NOT EXISTS idx_platforms_server_name ON platforms(server_name);
 CREATE INDEX IF NOT EXISTS idx_platforms_type ON platforms(type);
+CREATE INDEX IF NOT EXISTS idx_platforms_provision_status ON platforms(provision_status);
 
 -- Trigger to automatically update updated_at
 DROP TRIGGER IF EXISTS update_platforms_updated_at ON platforms;

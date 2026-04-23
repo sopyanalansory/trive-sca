@@ -21,6 +21,14 @@ const SALESFORCE_CREATE_PLATFORM_FLOW_URL =
   "https://gkg-mfsa.my.salesforce.com/services/data/v66.0/actions/custom/flow/Trive_Invest_API_Create_Platform";
 
 const DEFAULT_SALESFORCE_DEMO_AMOUNT = 100_000;
+const PROVISION_STATUS = {
+  BALANCE_APPLIED: "balance_applied",
+  BALANCE_PENDING: "balance_pending",
+  SF_FAILED: "sf_failed",
+  SF_FAILED_BALANCE_PENDING: "sf_failed_balance_pending",
+  COMPLETED: "completed",
+  SF_SYNCED_BALANCE_PENDING: "sf_synced_balance_pending",
+} as const;
 
 type CreateDemoBody = AddMetaUserInput & {
   serverName?: string;
@@ -82,14 +90,52 @@ type SalesforceCreatePlatformFlowRow = {
   errors?: unknown[] | null;
   outputValues?: {
     message?: string | null;
-    platform?: { Id?: string };
+    platform?: { Id?: string; RegistrationDate__c?: string; CreatedDate?: string };
+    RegistrationDate__c?: string;
+    registrationDate?: string;
+    CreatedDate?: string;
+    createdDate?: string;
     [key: string]: unknown;
   };
 };
 
+function pickRegistrationDateFromFlowRow(
+  row: SalesforceCreatePlatformFlowRow
+): string | null {
+  const fromOutputValues = row.outputValues;
+  const candidate =
+    (typeof fromOutputValues?.RegistrationDate__c === "string"
+      ? fromOutputValues.RegistrationDate__c
+      : null) ||
+    (typeof fromOutputValues?.registrationDate === "string"
+      ? fromOutputValues.registrationDate
+      : null) ||
+    (typeof fromOutputValues?.platform?.RegistrationDate__c === "string"
+      ? fromOutputValues.platform.RegistrationDate__c
+      : null) ||
+    (typeof fromOutputValues?.CreatedDate === "string"
+      ? fromOutputValues.CreatedDate
+      : null) ||
+    (typeof fromOutputValues?.createdDate === "string"
+      ? fromOutputValues.createdDate
+      : null) ||
+    (typeof fromOutputValues?.platform?.CreatedDate === "string"
+      ? fromOutputValues.platform.CreatedDate
+      : null) ||
+    null;
+
+  if (!candidate) return null;
+  const normalized = candidate.trim();
+  if (!normalized) return null;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
 function parseCreatePlatformFlowResponse(parsed: unknown): {
   ok: true;
   sfPlatformId: string;
+  sfRegistrationDate: string | null;
 } | {
   ok: false;
   message: string;
@@ -130,7 +176,11 @@ function parseCreatePlatformFlowResponse(parsed: unknown): {
       details: first.outputValues ?? null,
     };
   }
-  return { ok: true, sfPlatformId: trimmed };
+  return {
+    ok: true,
+    sfPlatformId: trimmed,
+    sfRegistrationDate: pickRegistrationDateFromFlowRow(first),
+  };
 }
 
 async function getValidSalesforceToken(): Promise<string> {
@@ -151,7 +201,7 @@ async function callCreatePlatformFlow(payload: {
   loginNumber: string;
   accountType: string;
 }): Promise<
-  | { ok: true; sfPlatformId: string }
+  | { ok: true; sfPlatformId: string; sfRegistrationDate: string | null }
   | { ok: false; message: string; details?: unknown; httpStatus?: number }
 > {
   const body = JSON.stringify({
@@ -222,7 +272,11 @@ async function callCreatePlatformFlow(payload: {
       details: parsedResult.details,
     };
   }
-  return { ok: true, sfPlatformId: parsedResult.sfPlatformId };
+  return {
+    ok: true,
+    sfPlatformId: parsedResult.sfPlatformId,
+    sfRegistrationDate: parsedResult.sfRegistrationDate,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -418,6 +472,13 @@ export async function POST(request: NextRequest) {
     const initialDemoBalance = balance
       ? Number(balance)
       : DEFAULT_SALESFORCE_DEMO_AMOUNT;
+    let balanceApplyError:
+      | {
+          message: string;
+          statusCode: number;
+          detail?: unknown;
+        }
+      | null = null;
     try {
       await applyMetaTradeBalance({
         login: loginNumber,
@@ -427,6 +488,13 @@ export async function POST(request: NextRequest) {
       });
     } catch (error: unknown) {
       if (error instanceof MetaManagerError) {
+        balanceApplyError = {
+          message:
+            error.message ||
+            "Gagal mengatur balance awal di Meta untuk akun demo yang sudah dibuat.",
+          statusCode: error.statusCode,
+          detail: error.detail,
+        };
         log.warn(
           {
             ...requestLogFields(request),
@@ -438,18 +506,9 @@ export async function POST(request: NextRequest) {
           },
           "Apply initial demo balance to MetaManager failed"
         );
-        return NextResponse.json(
-          {
-            error:
-              "Akun demo berhasil dibuat, tetapi gagal mengatur balance awal di Meta.",
-            loginNumber,
-            requestedBalance: balance || null,
-            initialDemoBalance,
-          },
-          { status: error.statusCode === 500 ? 500 : 502 }
-        );
+      } else {
+        throw error;
       }
-      throw error;
     }
 
     const platformRegistrationId =
@@ -459,13 +518,26 @@ export async function POST(request: NextRequest) {
     const status = pickString(body.status) || "Enabled";
     const currency = pickString(body.currency) || "USD";
     const nickname = pickString(body.comment) || null;
+    const provisionStatusAfterBalance =
+      balanceApplyError == null
+        ? PROVISION_STATUS.BALANCE_APPLIED
+        : PROVISION_STATUS.BALANCE_PENDING;
+    const provisionErrorAfterBalance =
+      balanceApplyError == null
+        ? null
+        : JSON.stringify({
+            stage: "balance",
+            message: balanceApplyError.message,
+            detail: balanceApplyError.detail ?? null,
+            statusCode: balanceApplyError.statusCode,
+          });
 
     const insertPlatform = await pool.query(
       `INSERT INTO platforms (
           platform_registration_id, user_id, account_id, login_number, server_name,
           account_type, client_group_name, status, currency, leverage, nickname,
-          swap_free, type
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          swap_free, type, provision_status, provision_error
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb)
         ON CONFLICT (platform_registration_id) DO UPDATE SET
           user_id = EXCLUDED.user_id,
           account_id = EXCLUDED.account_id,
@@ -479,6 +551,8 @@ export async function POST(request: NextRequest) {
           nickname = EXCLUDED.nickname,
           swap_free = EXCLUDED.swap_free,
           type = EXCLUDED.type,
+          provision_status = EXCLUDED.provision_status,
+          provision_error = EXCLUDED.provision_error,
           updated_at = CURRENT_TIMESTAMP
         RETURNING id`,
       [
@@ -495,6 +569,8 @@ export async function POST(request: NextRequest) {
         nickname,
         "Tidak",
         "Demo",
+        provisionStatusAfterBalance,
+        provisionErrorAfterBalance,
       ]
     );
 
@@ -535,13 +611,40 @@ export async function POST(request: NextRequest) {
       const http = sfResult.httpStatus;
       const returnStatus =
         http != null && http >= 500 && http < 600 ? http : 502;
+      const sfProvisionStatus =
+        balanceApplyError == null
+          ? PROVISION_STATUS.SF_FAILED
+          : PROVISION_STATUS.SF_FAILED_BALANCE_PENDING;
+      await pool.query(
+        `UPDATE platforms
+         SET provision_status = $1,
+             provision_error = $2::jsonb,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND user_id = $4`,
+        [
+          sfProvisionStatus,
+          JSON.stringify({
+            stage: "salesforce",
+            message: sfResult.message,
+            details: sfResult.details ?? null,
+            httpStatus: http ?? null,
+            balanceApplyError,
+          }),
+          platformRowId,
+          decoded.userId,
+        ]
+      );
       return NextResponse.json(
         {
           error:
             sfResult.message ||
             "Akun demo tersimpan di aplikasi, tetapi gagal mendaftarkan platform ke Salesforce.",
+          partial: true,
+          stage: "salesforce",
           loginNumber,
           platformRegistrationId,
+          balanceApplied: balanceApplyError == null,
+          balanceApplyError,
           salesforce: { details: sfResult.details ?? null, httpStatus: http ?? null },
         },
         { status: returnStatus }
@@ -549,25 +652,61 @@ export async function POST(request: NextRequest) {
     }
 
     const sfPlatformId = sfResult.sfPlatformId;
+    const sfRegistrationDate = sfResult.sfRegistrationDate;
+    const finalProvisionStatus =
+      balanceApplyError == null
+        ? PROVISION_STATUS.COMPLETED
+        : PROVISION_STATUS.SF_SYNCED_BALANCE_PENDING;
+    const finalProvisionError =
+      balanceApplyError == null
+        ? null
+        : JSON.stringify({
+            stage: "balance",
+            message: balanceApplyError.message,
+            detail: balanceApplyError.detail ?? null,
+            statusCode: balanceApplyError.statusCode,
+          });
     await pool.query(
       `UPDATE platforms
-       SET platform_registration_id = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND user_id = $3`,
-      [sfPlatformId, platformRowId, decoded.userId]
+       SET platform_registration_id = $1,
+           registration_date = COALESCE($2::timestamptz, registration_date),
+           provision_status = $3,
+           provision_error = $4::jsonb,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5 AND user_id = $6`,
+      [
+        sfPlatformId,
+        sfRegistrationDate,
+        finalProvisionStatus,
+        finalProvisionError,
+        platformRowId,
+        decoded.userId,
+      ]
     );
 
     return NextResponse.json(
       {
         ok: true,
-        message: "Akun demo berhasil dibuat",
+        partial: balanceApplyError != null,
+        stage: balanceApplyError ? "balance" : null,
+        message:
+          balanceApplyError == null
+            ? "Akun demo berhasil dibuat"
+            : "Akun demo berhasil dibuat, tetapi balance awal belum berhasil diterapkan di Meta.",
         loginNumber,
         platformRegistrationId: sfPlatformId,
         salesforceAccountType,
         salesforceAmount,
+        registrationDate: sfRegistrationDate,
+        balanceApplied: balanceApplyError == null,
+        balanceApplyError,
         requestedBalance: balance || null,
         requestedStopOutLevel: stopOutLevel || null,
+        provisionStatus: finalProvisionStatus,
         note:
-          "Balance awal akun demo sudah diterapkan ke Meta dengan trade balance type=2 (comment: Initial Margin). ID platform mengikuti PlatformRegistration__c di Salesforce.",
+          balanceApplyError == null
+            ? "Balance awal akun demo sudah diterapkan ke Meta dengan trade balance type=2 (comment: Initial Margin). ID platform mengikuti PlatformRegistration__c di Salesforce."
+            : "Akun demo dan sinkronisasi Salesforce berhasil, tetapi apply balance awal ke Meta gagal. Silakan lakukan retry balance secara manual.",
       },
       { status: 200 }
     );

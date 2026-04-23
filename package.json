@@ -25,6 +25,7 @@
     "migrate-salesforce-oauth-token": "tsx lib/run-salesforce-oauth-token-migration.ts",
     "migrate-add-nickname-fix-rate": "tsx lib/run-add-nickname-fix-rate-migration.ts",
     "migrate-add-registration-date": "tsx lib/run-add-registration-date-migration.ts",
+    "migrate-add-provision-status": "tsx lib/run-add-provision-status-migration.ts",
     "migrate-campaign": "tsx lib/run-campaign-migration.ts",
     "migrate-campaign-add-rewards-01": "tsx lib/run-add-rewards-01-to-campaigns-migration.ts",
     "migrate-campaign-members": "tsx lib/run-campaign-members-migration.ts",
