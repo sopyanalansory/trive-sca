@@ -127,7 +127,11 @@ export async function GET(request: NextRequest) {
           created_at,
           updated_at
         FROM market_updates
-        ORDER BY salesforce_id, updated_at DESC, id DESC
+        ORDER BY
+          salesforce_id,
+          CASE WHEN LOWER(COALESCE(status, '')) = 'draft' THEN 1 ELSE 0 END,
+          updated_at DESC,
+          id DESC
       )
     `;
 
@@ -284,7 +288,10 @@ export async function POST(request: NextRequest) {
         `SELECT id
          FROM market_updates
          WHERE salesforce_id = $1
-         ORDER BY updated_at DESC, id DESC
+         ORDER BY
+           CASE WHEN LOWER(COALESCE(status, '')) = 'draft' THEN 1 ELSE 0 END,
+           updated_at DESC,
+           id DESC
          FOR UPDATE`,
         [normalizedSalesforceId]
       );
