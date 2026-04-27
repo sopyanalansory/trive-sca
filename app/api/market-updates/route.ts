@@ -54,49 +54,49 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sort_by') || 'created_at';
     const sortOrder = searchParams.get('sort_order')?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     
-    // Build query conditions
+    // Build query conditions (applied after dedup by salesforce_id)
     const conditions: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
     
     if (status) {
-      conditions.push(`LOWER(status) = LOWER($${paramIndex})`);
+      conditions.push(`LOWER(m.status) = LOWER($${paramIndex})`);
       values.push(status);
       paramIndex++;
     }
     
     if (researchType) {
-      conditions.push(`research_type = $${paramIndex}`);
+      conditions.push(`m.research_type = $${paramIndex}`);
       values.push(researchType);
       paramIndex++;
     }
     
     if (createdBy) {
-      conditions.push(`created_by ILIKE $${paramIndex}`);
+      conditions.push(`m.created_by ILIKE $${paramIndex}`);
       values.push(`%${createdBy}%`);
       paramIndex++;
     }
     
     if (salesforceId) {
-      conditions.push(`salesforce_id = $${paramIndex}`);
+      conditions.push(`m.salesforce_id = $${paramIndex}`);
       values.push(salesforceId);
       paramIndex++;
     }
     
     if (search) {
-      conditions.push(`(title ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
+      conditions.push(`(m.title ILIKE $${paramIndex} OR m.summary ILIKE $${paramIndex})`);
       values.push(`%${search}%`);
       paramIndex++;
     }
     
     if (startDate) {
-      conditions.push(`created_at >= $${paramIndex}`);
+      conditions.push(`m.created_at >= $${paramIndex}`);
       values.push(startDate);
       paramIndex++;
     }
     
     if (endDate) {
-      conditions.push(`created_at <= $${paramIndex}`);
+      conditions.push(`m.created_at <= $${paramIndex}`);
       values.push(endDate);
       paramIndex++;
     }
@@ -107,34 +107,60 @@ export async function GET(request: NextRequest) {
     const allowedSortColumns = ['id', 'created_at', 'updated_at', 'status', 'research_type', 'title', 'created_by', 'salesforce_id'];
     const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at';
     
-    // Get total count
-    const countQuery = `SELECT COUNT(*) FROM market_updates ${whereClause}`;
+    const dedupedCte = `
+      WITH latest_market_updates AS (
+        SELECT DISTINCT ON (salesforce_id)
+          id,
+          research_type,
+          status,
+          title,
+          summary,
+          img_url,
+          economic_data_1,
+          economic_data_2,
+          economic_data_3,
+          economic_data_4,
+          economic_data_5,
+          meta_text,
+          created_by,
+          salesforce_id,
+          created_at,
+          updated_at
+        FROM market_updates
+        ORDER BY salesforce_id, updated_at DESC, id DESC
+      )
+    `;
+
+    // Get total count from deduped rows
+    const countQuery = `${dedupedCte}
+      SELECT COUNT(*) FROM latest_market_updates m ${whereClause}
+    `;
     const countResult = await pool.query(countQuery, values);
     const totalItems = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(totalItems / limit);
     
     // Get data with pagination
-    const dataQuery = `
+    const dataQuery = `${dedupedCte}
       SELECT 
-        id,
-        research_type,
-        status,
-        title,
-        summary,
-        img_url,
-        economic_data_1,
-        economic_data_2,
-        economic_data_3,
-        economic_data_4,
-        economic_data_5,
-        meta_text,
-        created_by,
-        salesforce_id,
-        created_at,
-        updated_at
-      FROM market_updates 
+        m.id,
+        m.research_type,
+        m.status,
+        m.title,
+        m.summary,
+        m.img_url,
+        m.economic_data_1,
+        m.economic_data_2,
+        m.economic_data_3,
+        m.economic_data_4,
+        m.economic_data_5,
+        m.meta_text,
+        m.created_by,
+        m.salesforce_id,
+        m.created_at,
+        m.updated_at
+      FROM latest_market_updates m
       ${whereClause}
-      ORDER BY ${safeSortBy} ${sortOrder}
+      ORDER BY m.${safeSortBy} ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     
@@ -246,22 +272,111 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert new market update
-    const result = await pool.query(
-      `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-       RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at`,
-      [research_type, finalStatus, title, summary || null, img_url || null, economic_data_1 || null, economic_data_2 || null, economic_data_3 || null, economic_data_4 || null, economic_data_5 || null, meta_text || null, created_by, salesforce_id]
-    );
+    const normalizedSalesforceId = String(salesforce_id).trim();
+    const client = await pool.connect();
+    let result;
+    let didCreate = false;
+
+    try {
+      await client.query('BEGIN');
+
+      const existingRows = await client.query<{ id: number }>(
+        `SELECT id
+         FROM market_updates
+         WHERE salesforce_id = $1
+         ORDER BY updated_at DESC, id DESC
+         FOR UPDATE`,
+        [normalizedSalesforceId]
+      );
+
+      if (existingRows.rows.length > 0) {
+        const primaryId = existingRows.rows[0].id;
+
+        result = await client.query(
+          `UPDATE market_updates
+           SET research_type = $1,
+               status = $2,
+               title = $3,
+               summary = $4,
+               img_url = $5,
+               economic_data_1 = $6,
+               economic_data_2 = $7,
+               economic_data_3 = $8,
+               economic_data_4 = $9,
+               economic_data_5 = $10,
+               meta_text = $11,
+               created_by = $12,
+               salesforce_id = $13
+           WHERE id = $14
+           RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at`,
+          [
+            research_type,
+            finalStatus,
+            title,
+            summary || null,
+            img_url || null,
+            economic_data_1 || null,
+            economic_data_2 || null,
+            economic_data_3 || null,
+            economic_data_4 || null,
+            economic_data_5 || null,
+            meta_text || null,
+            created_by,
+            normalizedSalesforceId,
+            primaryId,
+          ]
+        );
+
+        await client.query(
+          `UPDATE market_updates
+           SET status = 'Draft'
+           WHERE salesforce_id = $1
+             AND id <> $2
+             AND status <> 'Draft'`,
+          [normalizedSalesforceId, primaryId]
+        );
+      } else {
+        didCreate = true;
+        result = await client.query(
+          `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at`,
+          [
+            research_type,
+            finalStatus,
+            title,
+            summary || null,
+            img_url || null,
+            economic_data_1 || null,
+            economic_data_2 || null,
+            economic_data_3 || null,
+            economic_data_4 || null,
+            economic_data_5 || null,
+            meta_text || null,
+            created_by,
+            normalizedSalesforceId,
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (txError) {
+      await client.query('ROLLBACK');
+      throw txError;
+    } finally {
+      client.release();
+    }
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Market update berhasil dibuat',
+        message: didCreate
+          ? 'Market update berhasil dibuat'
+          : 'Market update berhasil diupdate',
         data: result.rows[0],
       },
       { 
-        status: 201,
+        status: didCreate ? 201 : 200,
       }
     );
   } catch (error: unknown) {
