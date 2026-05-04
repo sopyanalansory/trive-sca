@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS market_updates (
   economic_data_3 TEXT,
   economic_data_4 TEXT,
   economic_data_5 TEXT,
+  full_content TEXT,
   created_by VARCHAR(255),
   salesforce_id VARCHAR(255) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

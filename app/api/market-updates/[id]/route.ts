@@ -60,6 +60,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         economic_data_4,
         economic_data_5,
         meta_text,
+        full_content,
         created_by,
         salesforce_id,
         created_at,
@@ -126,6 +127,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       economic_data_4,
       economic_data_5,
       meta_text,
+      full_content,
       created_by,
       salesforce_id
     } = body;
@@ -220,6 +222,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       paramIndex++;
     }
 
+    if (full_content !== undefined) {
+      updates.push(`full_content = $${paramIndex}`);
+      values.push(full_content || null);
+      paramIndex++;
+    }
+
     if (created_by !== undefined) {
       if (!created_by.trim()) {
         return NextResponse.json(
@@ -258,7 +266,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       UPDATE market_updates 
       SET ${updates.join(', ')}
       WHERE ${identifierColumn} = $${paramIndex}
-      RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at
+      RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, full_content, created_by, salesforce_id, created_at, updated_at
     `;
 
     const result = await pool.query(updateQuery, values);

@@ -122,6 +122,7 @@ export async function GET(request: NextRequest) {
           economic_data_4,
           economic_data_5,
           meta_text,
+          full_content,
           created_by,
           salesforce_id,
           created_at,
@@ -158,6 +159,7 @@ export async function GET(request: NextRequest) {
         m.economic_data_4,
         m.economic_data_5,
         m.meta_text,
+        m.full_content,
         m.created_by,
         m.salesforce_id,
         m.created_at,
@@ -226,6 +228,7 @@ export async function POST(request: NextRequest) {
       economic_data_4,
       economic_data_5,
       meta_text,
+      full_content,
       created_by,
       salesforce_id
     } = body;
@@ -312,10 +315,11 @@ export async function POST(request: NextRequest) {
                economic_data_4 = $9,
                economic_data_5 = $10,
                meta_text = $11,
-               created_by = $12,
-               salesforce_id = $13
-           WHERE id = $14
-           RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at`,
+               full_content = $12,
+               created_by = $13,
+               salesforce_id = $14
+           WHERE id = $15
+           RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, full_content, created_by, salesforce_id, created_at, updated_at`,
           [
             research_type,
             finalStatus,
@@ -328,6 +332,7 @@ export async function POST(request: NextRequest) {
             economic_data_4 || null,
             economic_data_5 || null,
             meta_text || null,
+            full_content || null,
             created_by,
             normalizedSalesforceId,
             primaryId,
@@ -345,9 +350,9 @@ export async function POST(request: NextRequest) {
       } else {
         didCreate = true;
         result = await client.query(
-          `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-           RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, created_by, salesforce_id, created_at, updated_at`,
+          `INSERT INTO market_updates (research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, full_content, created_by, salesforce_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+           RETURNING id, research_type, status, title, summary, img_url, economic_data_1, economic_data_2, economic_data_3, economic_data_4, economic_data_5, meta_text, full_content, created_by, salesforce_id, created_at, updated_at`,
           [
             research_type,
             finalStatus,
@@ -360,6 +365,7 @@ export async function POST(request: NextRequest) {
             economic_data_4 || null,
             economic_data_5 || null,
             meta_text || null,
+            full_content || null,
             created_by,
             normalizedSalesforceId,
           ]

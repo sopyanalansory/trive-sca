@@ -18,6 +18,7 @@
     "migrate-deposit-withdrawal": "tsx lib/run-deposit-withdrawal-migration.ts",
     "migrate-add-type": "tsx lib/run-add-type-migration.ts",
     "migrate-meta-text": "tsx lib/run-meta-text-migration.ts",
+    "migrate-full-content": "tsx lib/run-full-content-migration.ts",
     "migrate-market-updates-nullable": "tsx lib/run-market-updates-nullable-migration.ts",
     "migrate-add-profile-fields": "tsx lib/run-add-profile-fields-migration.ts",
     "migrate-add-salesforce-user-fields": "tsx lib/run-add-salesforce-user-fields-migration.ts",

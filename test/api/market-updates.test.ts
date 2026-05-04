@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getReq, postJson, basicAuthHeader } from "../helpers/request";
 
-vi.mock("@/lib/db", () => ({
-  default: {
-    query: vi.fn(),
-  },
-}));
+vi.mock("@/lib/db", () => {
+  const query = vi.fn();
+  return {
+    default: {
+      query,
+      connect: vi.fn().mockResolvedValue({
+        query,
+        release: vi.fn(),
+      }),
+    },
+  };
+});
 
 import { GET, POST } from "@/app/api/market-updates/route";
 import pool from "@/lib/db";
@@ -23,6 +30,7 @@ const row = {
   economic_data_4: null,
   economic_data_5: null,
   meta_text: null,
+  full_content: null,
   created_by: "tester",
   salesforce_id: "SF-001",
   created_at: new Date("2026-01-01T00:00:00.000Z"),
@@ -90,16 +98,17 @@ describe("/api/market-updates", () => {
     });
 
     it("returns 201 when create succeeds", async () => {
-      vi.mocked(pool.query).mockResolvedValueOnce({
-        rows: [
-          {
-            ...structuredClone(row),
-            id: 99,
-            title: "New post",
-            salesforce_id: "SF-NEW",
-          },
-        ],
-      });
+      const created = {
+        ...structuredClone(row),
+        id: 99,
+        title: "New post",
+        salesforce_id: "SF-NEW",
+      };
+      vi.mocked(pool.query)
+        .mockResolvedValueOnce({ rows: [] } as never) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }) // SELECT FOR UPDATE: no row → insert
+        .mockResolvedValueOnce({ rows: [created] }) // INSERT
+        .mockResolvedValueOnce({ rows: [] } as never); // COMMIT
 
       const res = await POST(
         postJson(
