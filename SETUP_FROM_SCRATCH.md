@@ -293,6 +293,22 @@ pm2 env trive-sca
 
 ---
 
+## Framer CMS sync (Server API, tanpa plugin)
+
+Untuk mendorong **Published** market updates dari API ke satu **CMS Collection Unmanaged** di Framer gunakan [Framer Server API](https://www.framer.com/developers/server-api-reference) (`framer-api`):
+
+1. Di Framer: buat collection (nama default `Market Updates`) dengan field nama persis seperti komentar di `scripts/sync-framer-market-updates.ts` (Title, Research type, … Full content = formatted text HTML, Image URL = link).
+2. Ambil **Project URL** + **API key** dari project ([contoh repo](https://github.com/framer/server-api-examples)).
+3. Set env `FRAMER_PROJECT_URL`, `FRAMER_API_KEY`, lalu jalankan:
+
+```bash
+npm run sync-framer-market-updates
+```
+
+Paket `framer-api` mensarankan **Node.js ≥ 22**. Variabel opsional: `FRAMER_MU_COLLECTION`, `MARKET_UPDATES_API_URL`.
+
+---
+
 ## 📝 Checklist Final
 
 Setelah setup selesai, pastikan:

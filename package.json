@@ -39,7 +39,8 @@
     "sync-salesforce-campaigns": "tsx scripts/sync-salesforce-campaigns.ts",
     "setup-salesforce-cron": "tsx scripts/setup-salesforce-cron.ts",
     "generate-favicon": "node scripts/generate-favicon.js",
-    "test:oss-cdn": "tsx scripts/test-oss-cdn.ts"
+    "test:oss-cdn": "tsx scripts/test-oss-cdn.ts",
+    "sync-framer-market-updates": "tsx scripts/sync-framer-market-updates.ts"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.8",
@@ -47,6 +48,7 @@
     "ali-oss": "^6.23.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
+    "framer-api": "0.1.7",
     "jsonwebtoken": "^9.0.3",
     "next": "16.1.0",
     "nodemailer": "^6.9.8",
