@@ -314,6 +314,43 @@ export async function getMetaUserAccount(login: string): Promise<unknown> {
   });
 }
 
+export async function getMetaLoginsByGroup(group: string): Promise<unknown[]> {
+  const normalizedGroup = String(group).trim();
+  if (!normalizedGroup) {
+    throw new MetaManagerError("get logins by group: group is required", 400);
+  }
+
+  const result = await executeAuthenticatedMetaRequest<unknown>({
+    path: `/api/user/logins?group=${encodeURIComponent(normalizedGroup)}`,
+    context: "get logins by group",
+  });
+  return Array.isArray(result) ? result : [];
+}
+
+export async function sendMetaNotification(options: {
+  login: string;
+  message: string;
+}): Promise<unknown> {
+  const normalizedLogin = String(options.login).trim();
+  const normalizedMessage = String(options.message).trim();
+  if (!normalizedLogin) {
+    throw new MetaManagerError("send notification: login is required", 400);
+  }
+  if (!normalizedMessage) {
+    throw new MetaManagerError("send notification: message is required", 400);
+  }
+
+  // Keep escaping behavior aligned with existing bridge service.
+  const safeMessage = normalizedMessage.replaceAll("\n", "\\\n");
+
+  return await executeAuthenticatedMetaRequest({
+    path:
+      `/api/notification/send?login=${encodeURIComponent(normalizedLogin)}` +
+      `&text=${encodeURIComponent(safeMessage)}`,
+    context: "send notification",
+  });
+}
+
 export async function checkMetaUserBalance(login: string): Promise<unknown> {
   try {
     return await executeAuthenticatedMetaRequest({

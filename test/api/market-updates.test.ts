@@ -11,10 +11,12 @@ const {
   mockScheduleMarketUpdateFramerSync,
   mockScheduleMarketUpdateRemovedFromFramer,
   mockListMarketUpdatesFromFramer,
+  mockEnqueueMarketUpdateNotificationJob,
 } = vi.hoisted(() => ({
   mockScheduleMarketUpdateFramerSync: vi.fn(),
   mockScheduleMarketUpdateRemovedFromFramer: vi.fn(),
   mockListMarketUpdatesFromFramer: vi.fn(),
+  mockEnqueueMarketUpdateNotificationJob: vi.fn(),
 }));
 
 vi.mock("@/lib/framer-market-update-push", () => ({
@@ -25,6 +27,10 @@ vi.mock("@/lib/framer-market-update-push", () => ({
 vi.mock("@/lib/framer-market-updates-framer-read", () => ({
   listMarketUpdatesFromFramer: mockListMarketUpdatesFromFramer,
   getMarketUpdateFromFramerByDbId: vi.fn(),
+}));
+
+vi.mock("@/lib/market-update-notification-queue", () => ({
+  enqueueMarketUpdateNotificationJob: mockEnqueueMarketUpdateNotificationJob,
 }));
 
 vi.mock("@/lib/db", () => {
@@ -74,6 +80,7 @@ describe("/api/market-updates", () => {
     mockScheduleMarketUpdateFramerSync.mockClear();
     mockScheduleMarketUpdateRemovedFromFramer.mockClear();
     mockListMarketUpdatesFromFramer.mockReset();
+    mockEnqueueMarketUpdateNotificationJob.mockReset();
   });
 
   describe("GET", () => {

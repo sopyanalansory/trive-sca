@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { listMarketUpdatesFromFramer } from '@/lib/framer-market-updates-framer-read';
 import { scheduleMarketUpdateFramerSync } from '@/lib/framer-market-update-push';
+import {
+  isMetaMarketUpdateNotificationEnabled,
+} from '@/lib/market-update-meta-notification';
+import { enqueueMarketUpdateNotificationJob } from '@/lib/market-update-notification-queue';
 import { apiLogger, logRouteError } from '@/lib/logger';
 
 const log = apiLogger('market-updates');
@@ -9,6 +13,12 @@ const log = apiLogger('market-updates');
 // Basic Auth credentials (should be in environment variables for production)
 const BASIC_AUTH_USERNAME = process.env.MARKET_UPDATES_USERNAME || 'admin';
 const BASIC_AUTH_PASSWORD = process.env.MARKET_UPDATES_PASSWORD || 'trive2024!';
+
+function toText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return '';
+}
 
 // Helper function to verify Basic Auth
 function verifyBasicAuth(request: NextRequest): { success: boolean; error?: string } {
@@ -433,7 +443,19 @@ export async function POST(request: NextRequest) {
       client.release();
     }
 
-    scheduleMarketUpdateFramerSync(result.rows[0] as Record<string, unknown>);
+    const writtenRow = result.rows[0] as Record<string, unknown>;
+    scheduleMarketUpdateFramerSync(writtenRow);
+
+    const rowStatus = toText(writtenRow.status).trim().toLowerCase();
+    if (rowStatus === 'published' && isMetaMarketUpdateNotificationEnabled()) {
+      void enqueueMarketUpdateNotificationJob({
+        salesforceId: toText(writtenRow.salesforce_id).trim() || 'unknown',
+        title: toText(writtenRow.title).trim() || 'Market Update',
+        summary: toText(writtenRow.summary).trim(),
+      }).catch((err) => {
+        log.warn({ err }, 'Failed to enqueue market update notification job');
+      });
+    }
 
     return NextResponse.json(
       {
@@ -441,7 +463,7 @@ export async function POST(request: NextRequest) {
         message: didCreate
           ? 'Market update berhasil dibuat'
           : 'Market update berhasil diupdate',
-        data: result.rows[0],
+        data: writtenRow,
       },
       { 
         status: didCreate ? 201 : 200,
