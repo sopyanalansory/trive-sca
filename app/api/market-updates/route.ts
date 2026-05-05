@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { scheduleMarketUpdateFramerSync } from '@/lib/framer-market-update-push';
 import { apiLogger, logRouteError } from '@/lib/logger';
 
 const log = apiLogger('market-updates');
@@ -379,6 +380,8 @@ export async function POST(request: NextRequest) {
     } finally {
       client.release();
     }
+
+    scheduleMarketUpdateFramerSync(result.rows[0] as Record<string, unknown>);
 
     return NextResponse.json(
       {

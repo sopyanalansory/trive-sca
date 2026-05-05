@@ -20,18 +20,22 @@
  *   MARKET_UPDATES_SYNC_SOURCE — kosong/db = pakai DB bila DATABASE_URL ada; `api` = pakai HTTP saja
  *   MARKET_UPDATES_API_URL — dipakai hanya jika tidak ada DATABASE_URL atau SYNC_SOURCE=api
  *     (default https://api.trive.co.id/api/market-updates)
+ *   FRAMER_PUSH_ON_WEBHOOK — tidak dipakai oleh skrip ini; untuk push dari API Next.js saat SF webhook (POST/PUT).
  */
 
 import "dotenv/config";
 
 import pool from "@/lib/db";
+import {
+  SLUG_RE,
+  assertWritableCollection,
+  buildFieldData,
+  mapFieldsByLabel,
+  normalizeMarketRowForFramer,
+  type MarketRow,
+} from "@/lib/framer-market-updates-cms-fields";
 import WebSocketPolyfill from "ws";
-import type {
-  Collection,
-  CollectionItemInput,
-  Field,
-  FieldDataInput,
-} from "framer-api";
+import type { CollectionItemInput } from "framer-api";
 
 /** framer-api memanggil `new globalThis.WebSocket(url, { headers })` — baru ada stabil di Node ~22+. */
 function ensureGlobalWebSocket(): void {
@@ -72,39 +76,6 @@ const LATEST_MARKET_UPDATES_CTE = `
   )
 `;
 
-const FIELD_LABELS = {
-  title: "Title",
-  researchType: "Research type",
-  status: "Status",
-  summary: "Summary",
-  fullContent: "Full content",
-  imageUrl: "Image URL",
-  metaText: "Meta text",
-  createdAt: "Created at",
-  updatedAt: "Updated at",
-  createdBy: "Created by",
-  salesforceId: "Salesforce ID",
-} as const;
-
-type FieldKey = keyof typeof FIELD_LABELS;
-
-type MarketRow = {
-  id: number;
-  research_type: string | null;
-  status: string | null;
-  title: string | null;
-  summary: string | null;
-  img_url: string | null;
-  meta_text: string | null;
-  full_content: string | null;
-  created_by: string | null;
-  salesforce_id: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-const SLUG_RE = /^mu-(\d+)$/;
-
 function requireEnv(name: string): string {
   const v = process.env[name]?.trim();
   if (!v) throw new Error(`Missing required env: ${name}`);
@@ -113,29 +84,6 @@ function requireEnv(name: string): string {
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, "");
-}
-
-function asIsoString(v: unknown): string {
-  if (v instanceof Date) return v.toISOString();
-  if (typeof v === "string") return v;
-  return "";
-}
-
-function normalizeDbRow(r: Record<string, unknown>): MarketRow {
-  return {
-    id: Number(r.id),
-    research_type: (r.research_type as string | null) ?? null,
-    status: (r.status as string | null) ?? null,
-    title: (r.title as string | null) ?? null,
-    summary: (r.summary as string | null) ?? null,
-    img_url: (r.img_url as string | null) ?? null,
-    meta_text: (r.meta_text as string | null) ?? null,
-    full_content: (r.full_content as string | null) ?? null,
-    created_by: (r.created_by as string | null) ?? null,
-    salesforce_id: (r.salesforce_id as string | null) ?? null,
-    created_at: asIsoString(r.created_at),
-    updated_at: asIsoString(r.updated_at),
-  };
 }
 
 async function fetchPublishedRowsFromDb(): Promise<MarketRow[]> {
@@ -167,7 +115,7 @@ async function fetchPublishedRowsFromDb(): Promise<MarketRow[]> {
   while (hasMore) {
     const res = await pool.query(baseQuery, [limit, offset]);
     for (const row of res.rows) {
-      out.push(normalizeDbRow(row as Record<string, unknown>));
+      out.push(normalizeMarketRowForFramer(row as Record<string, unknown>));
     }
     hasMore = res.rows.length === limit;
     offset += limit;
@@ -210,61 +158,6 @@ async function fetchPublishedRows(apiBase: string): Promise<MarketRow[]> {
     if (page > 500) throw new Error("Safety stop: too many pages");
   }
   return out;
-}
-
-function mapFieldsByLabel(fields: Field[]): Record<FieldKey, Field> {
-  const byLower = new Map<string, Field>();
-  for (const f of fields) {
-    byLower.set(f.name.toLowerCase().trim(), f);
-  }
-  const out = {} as Record<FieldKey, Field>;
-  for (const key of Object.keys(FIELD_LABELS) as FieldKey[]) {
-    const label = FIELD_LABELS[key];
-    const field = byLower.get(label.toLowerCase());
-    if (!field) {
-      throw new Error(
-        `CMS collection missing field "${label}". Buat field dengan nama persis ini di Framer.`
-      );
-    }
-    out[key] = field;
-  }
-  return out;
-}
-
-function buildFieldData(row: MarketRow, fm: Record<FieldKey, Field>): FieldDataInput {
-  const fullHtml = row.full_content?.trim() ?? "";
-
-  return {
-    [fm.title.id]: { type: "string", value: row.title ?? "" },
-    [fm.researchType.id]: { type: "string", value: row.research_type ?? "" },
-    [fm.status.id]: { type: "string", value: row.status ?? "" },
-    [fm.summary.id]: { type: "string", value: row.summary ?? "" },
-    [fm.fullContent.id]: {
-      type: "formattedText",
-      value: fullHtml || "<p></p>",
-      contentType: "html",
-    },
-    [fm.imageUrl.id]: {
-      type: "link",
-      value: row.img_url?.trim() ? row.img_url.trim() : null,
-    },
-    [fm.metaText.id]: { type: "string", value: row.meta_text ?? "" },
-    [fm.createdAt.id]: { type: "date", value: row.created_at || null },
-    [fm.updatedAt.id]: { type: "date", value: row.updated_at || null },
-    [fm.createdBy.id]: { type: "string", value: row.created_by ?? "" },
-    [fm.salesforceId.id]: { type: "string", value: row.salesforce_id ?? "" },
-  };
-}
-
-function assertWritableCollection(c: Collection) {
-  if (c.managedBy !== "user") {
-    throw new Error(
-      "Collection ini dikelola plugin lain / bukan Unmanaged. Buat collection baru “biasa” di CMS Framer."
-    );
-  }
-  if (c.readonly) {
-    throw new Error("Collection read-only (cek permission / API key).");
-  }
 }
 
 async function main() {

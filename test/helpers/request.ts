@@ -15,6 +15,31 @@ export function postJson(
   });
 }
 
+export function putJson(
+  pathname: string,
+  body: unknown,
+  headers?: Record<string, string>
+): NextRequest {
+  return new NextRequest(`http://localhost${pathname}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(headers ?? {}),
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteReq(
+  pathname: string,
+  headers?: Record<string, string>
+): NextRequest {
+  return new NextRequest(`http://localhost${pathname}`, {
+    method: "DELETE",
+    headers: headers ?? {},
+  });
+}
+
 export function getReq(
   urlWithQuery: string,
   headers?: Record<string, string>

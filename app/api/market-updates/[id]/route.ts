@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import {
+  scheduleMarketUpdateFramerSync,
+  scheduleMarketUpdateRemovedFromFramer,
+} from '@/lib/framer-market-update-push';
 import { apiLogger, logRouteError } from '@/lib/logger';
 
 const log = apiLogger('market-updates:[id]');
@@ -271,6 +275,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const result = await pool.query(updateQuery, values);
 
+    scheduleMarketUpdateFramerSync(result.rows[0] as Record<string, unknown>);
+
     return NextResponse.json({
       success: true,
       message: 'Market update berhasil diupdate',
@@ -322,6 +328,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Delete market update
     await pool.query('DELETE FROM market_updates WHERE id = $1', [marketUpdateId]);
+
+    scheduleMarketUpdateRemovedFromFramer(marketUpdateId);
 
     return NextResponse.json({
       success: true,

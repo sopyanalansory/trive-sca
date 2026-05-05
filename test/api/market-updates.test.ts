@@ -1,5 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getReq, postJson, basicAuthHeader } from "../helpers/request";
+import {
+  getReq,
+  postJson,
+  putJson,
+  deleteReq,
+  basicAuthHeader,
+} from "../helpers/request";
+
+const {
+  mockScheduleMarketUpdateFramerSync,
+  mockScheduleMarketUpdateRemovedFromFramer,
+} = vi.hoisted(() => ({
+  mockScheduleMarketUpdateFramerSync: vi.fn(),
+  mockScheduleMarketUpdateRemovedFromFramer: vi.fn(),
+}));
+
+vi.mock("@/lib/framer-market-update-push", () => ({
+  scheduleMarketUpdateFramerSync: mockScheduleMarketUpdateFramerSync,
+  scheduleMarketUpdateRemovedFromFramer: mockScheduleMarketUpdateRemovedFromFramer,
+}));
 
 vi.mock("@/lib/db", () => {
   const query = vi.fn();
@@ -14,8 +33,13 @@ vi.mock("@/lib/db", () => {
   };
 });
 
+import { DELETE, PUT } from "@/app/api/market-updates/[id]/route";
 import { GET, POST } from "@/app/api/market-updates/route";
 import pool from "@/lib/db";
+
+function routeParams(id: string) {
+  return { params: Promise.resolve({ id }) };
+}
 
 const row = {
   id: 1,
@@ -40,6 +64,8 @@ const row = {
 describe("/api/market-updates", () => {
   beforeEach(() => {
     vi.mocked(pool.query).mockReset();
+    mockScheduleMarketUpdateFramerSync.mockClear();
+    mockScheduleMarketUpdateRemovedFromFramer.mockClear();
   });
 
   describe("GET", () => {
@@ -82,6 +108,7 @@ describe("/api/market-updates", () => {
         })
       );
       expect(res.status).toBe(401);
+      expect(mockScheduleMarketUpdateFramerSync).not.toHaveBeenCalled();
     });
 
     it("returns 400 when required fields missing", async () => {
@@ -126,6 +153,105 @@ describe("/api/market-updates", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.data.title).toBe("New post");
+      expect(mockScheduleMarketUpdateFramerSync).toHaveBeenCalledTimes(1);
+      expect(mockScheduleMarketUpdateFramerSync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 99,
+          title: "New post",
+          salesforce_id: "SF-NEW",
+        })
+      );
+    });
+
+    it("returns 200 when upsert updates existing salesforce_id and schedules Framer sync", async () => {
+      const updated = {
+        ...structuredClone(row),
+        id: 7,
+        title: "Updated via SF",
+        salesforce_id: "SF-EXIST",
+      };
+      vi.mocked(pool.query)
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ id: 7 }] })
+        .mockResolvedValueOnce({ rows: [updated] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] });
+
+      const res = await POST(
+        postJson(
+          "/api/market-updates",
+          {
+            research_type: "Daily Analysis/Strategy",
+            title: "Updated via SF",
+            created_by: "tester",
+            salesforce_id: "SF-EXIST",
+          },
+          auth
+        )
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.title).toBe("Updated via SF");
+      expect(mockScheduleMarketUpdateFramerSync).toHaveBeenCalledTimes(1);
+      expect(mockScheduleMarketUpdateFramerSync).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 7, salesforce_id: "SF-EXIST" })
+      );
+    });
+  });
+
+  describe("/api/market-updates/[id]", () => {
+    const auth = basicAuthHeader(
+      "test_market_api_user",
+      "test_market_api_secret"
+    );
+
+    describe("PUT", () => {
+      it("schedules Framer sync after successful update", async () => {
+        const updated = { ...structuredClone(row), title: "Put title" };
+        vi.mocked(pool.query)
+          .mockResolvedValueOnce({ rows: [{ id: 1 }] })
+          .mockResolvedValueOnce({ rows: [updated] });
+
+        const res = await PUT(
+          putJson(
+            "/api/market-updates/1",
+            {
+              salesforce_id: "SF-001",
+              title: "Put title",
+            },
+            auth
+          ),
+          routeParams("1")
+        );
+        expect(res.status).toBe(200);
+        expect(mockScheduleMarketUpdateFramerSync).toHaveBeenCalledTimes(1);
+        expect(mockScheduleMarketUpdateFramerSync).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 1, title: "Put title" })
+        );
+      });
+    });
+
+    describe("DELETE", () => {
+      it("schedules Framer removal after successful delete", async () => {
+        vi.mocked(pool.query)
+          .mockResolvedValueOnce({
+            rows: [{ id: 42, title: "Gone" }],
+          })
+          .mockResolvedValueOnce({ rows: [] });
+
+        const res = await DELETE(
+          deleteReq("/api/market-updates/42", auth),
+          routeParams("42")
+        );
+        expect(res.status).toBe(200);
+        expect(mockScheduleMarketUpdateRemovedFromFramer).toHaveBeenCalledTimes(
+          1
+        );
+        expect(mockScheduleMarketUpdateRemovedFromFramer).toHaveBeenCalledWith(
+          42
+        );
+      });
     });
   });
 });
