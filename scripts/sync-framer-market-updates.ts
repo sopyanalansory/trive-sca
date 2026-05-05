@@ -2,7 +2,8 @@
  * Sinkron market updates (Published) dari API trive-sca ke Framer CMS lewat Server API.
  *
  * Prasyarat:
- * - Node.js 22+ (disarankan; paket `framer-api` mensyaratkan >=22)
+ * - Node.js 20+ untuk menjalankan bundle; paket `framer-api` mensyaratkan >=22 (disarankan upgrade)
+ * - `npm run sync-framer-market-updates` memakai esbuild → bundle ESM agar `framer-api` (top-level await) tidak diproses tsx/esbuild sebagai CJS
  * - Di Framer: buat CMS collection **Unmanaged** (bukan milik plugin lain) dengan field
  *   nama persis seperti di `FIELD_LABELS` di bawah — urutan/tipe: Title string,
  *   Research type string, Status string, Summary string, Full content formatted text (HTML),

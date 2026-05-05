@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+scripts/.sync-framer-market-updates.bundle.mjs
 
 # debug
 npm-debug.log*

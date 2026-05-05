@@ -40,7 +40,7 @@
     "setup-salesforce-cron": "tsx scripts/setup-salesforce-cron.ts",
     "generate-favicon": "node scripts/generate-favicon.js",
     "test:oss-cdn": "tsx scripts/test-oss-cdn.ts",
-    "sync-framer-market-updates": "tsx scripts/sync-framer-market-updates.ts"
+    "sync-framer-market-updates": "esbuild scripts/sync-framer-market-updates.ts --bundle --platform=node --format=esm --packages=external --log-level=warning --outfile=scripts/.sync-framer-market-updates.bundle.mjs && node scripts/.sync-framer-market-updates.bundle.mjs"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.8",
@@ -68,6 +68,7 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.27.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.0",
     "sharp": "^0.34.5",
