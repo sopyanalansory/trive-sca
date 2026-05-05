@@ -2,7 +2,8 @@
  * Sinkron market updates (Published) dari API trive-sca ke Framer CMS lewat Server API.
  *
  * Prasyarat:
- * - Node.js 20+ untuk menjalankan bundle; paket `framer-api` mensyaratkan >=22 (disarankan upgrade)
+ * - Node.js 20+: `globalThis.WebSocket` tidak ada — skrip mengisi dari paket `ws` sebelum memuat `framer-api`.
+ * - Node.js 22.4+ punya WebSocket built-in (polyfill dilewati). Paket `framer-api` tetap mencantumkan engines >=22.
  * - `npm run sync-framer-market-updates` memakai esbuild → bundle ESM agar `framer-api` (top-level await) tidak diproses tsx/esbuild sebagai CJS
  * - Di Framer: buat CMS collection **Unmanaged** (bukan milik plugin lain) dengan field
  *   nama persis seperti di `FIELD_LABELS` di bawah — urutan/tipe: Title string,
@@ -24,13 +25,22 @@
 import "dotenv/config";
 
 import pool from "@/lib/db";
-import {
-  connect,
-  type Collection,
-  type CollectionItemInput,
-  type Field,
-  type FieldDataInput,
+import WebSocketPolyfill from "ws";
+import type {
+  Collection,
+  CollectionItemInput,
+  Field,
+  FieldDataInput,
 } from "framer-api";
+
+/** framer-api memanggil `new globalThis.WebSocket(url, { headers })` — baru ada stabil di Node ~22+. */
+function ensureGlobalWebSocket(): void {
+  const g = globalThis as typeof globalThis & {
+    WebSocket?: typeof globalThis.WebSocket;
+  };
+  if (typeof g.WebSocket === "function") return;
+  g.WebSocket = WebSocketPolyfill as unknown as typeof globalThis.WebSocket;
+}
 
 /** Sama dengan CTE di `app/api/market-updates/route.ts` — dedup per salesforce_id. */
 const LATEST_MARKET_UPDATES_CTE = `
@@ -261,7 +271,7 @@ async function main() {
   const nodeMajor = Number(process.versions.node.split(".")[0]);
   if (nodeMajor < 22) {
     console.warn(
-      `Warning: framer-api recommends Node >= 22 (current ${process.version}).`
+      `Note: Node ${process.version} — WebSocket untuk Framer diisi dari paket \`ws\`; upgrade ke Node 22+ disarankan (sesuai engines framer-api).`
     );
   }
 
@@ -299,6 +309,8 @@ async function main() {
 
     const apiDbIds = new Set(rows.map((r) => r.id));
 
+    ensureGlobalWebSocket();
+    const { connect } = await import("framer-api");
     console.log("Connecting to Framer Server API…");
     const framer = await connect(projectUrl, apiKey);
 
