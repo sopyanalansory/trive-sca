@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { getMarketUpdateFromFramerByDbId } from '@/lib/framer-market-updates-framer-read';
 import {
   scheduleMarketUpdateFramerSync,
   scheduleMarketUpdateRemovedFromFramer,
@@ -42,9 +43,63 @@ function verifyBasicAuth(request: NextRequest): { success: boolean; error?: stri
 // GET - Get single market update by ID (PUBLIC)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { searchParams } = new URL(request.url);
+    const sourceParam = searchParams.get('source')?.trim().toLowerCase();
+    if (
+      sourceParam &&
+      sourceParam !== 'db' &&
+      sourceParam !== 'framer'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Parameter source harus db atau framer.',
+        },
+        { status: 400 }
+      );
+    }
+    const source = sourceParam === 'framer' ? 'framer' : 'db';
+
     const { id } = await params;
     const numericId = parseInt(id, 10);
     const isNumericId = !isNaN(numericId) && id === numericId.toString();
+
+    if (source === 'framer') {
+      if (!isNumericId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'source=framer hanya mendukung id numerik (slug CMS: mu-{id}).',
+          },
+          { status: 400 }
+        );
+      }
+      try {
+        const row = await getMarketUpdateFromFramerByDbId(numericId);
+        if (!row) {
+          return NextResponse.json(
+            { success: false, error: 'Market update tidak ditemukan' },
+            { status: 404 }
+          );
+        }
+        return NextResponse.json({
+          success: true,
+          source: 'framer',
+          data: row,
+        });
+      } catch (framerErr: unknown) {
+        const msg =
+          framerErr instanceof Error ? framerErr.message : String(framerErr);
+        if (msg.includes('FRAMER_PROJECT_URL')) {
+          return NextResponse.json(
+            { success: false, error: msg },
+            { status: 503 }
+          );
+        }
+        throw framerErr;
+      }
+    }
 
     // Tentukan apakah update berdasarkan kolom id (numerik) atau salesforce_id (string)
     const identifierColumn = isNumericId ? 'id' : 'salesforce_id';
@@ -83,6 +138,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
+      source: 'db',
       data: result.rows[0],
     });
   } catch (error: unknown) {

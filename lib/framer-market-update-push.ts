@@ -3,31 +3,20 @@
  * Opt-in: set FRAMER_PUSH_ON_WEBHOOK=true dan FRAMER_PROJECT_URL + FRAMER_API_KEY.
  */
 
-import WebSocketPolyfill from "ws";
 import type { CollectionItemInput } from "framer-api";
 
 import { apiLogger } from "@/lib/logger";
 import {
   SLUG_RE,
-  assertWritableCollection,
   buildFieldData,
   isPublishedMarketRow,
-  mapFieldsByLabel,
   marketUpdateSlug,
   normalizeMarketRowForFramer,
-  type FieldKey,
   type MarketRow,
 } from "@/lib/framer-market-updates-cms-fields";
+import { withFramerMarketUpdatesCollection } from "@/lib/framer-market-updates-framer-connection";
 
 const log = apiLogger("framer-market-push");
-
-function ensureGlobalWebSocket(): void {
-  const g = globalThis as typeof globalThis & {
-    WebSocket?: typeof globalThis.WebSocket;
-  };
-  if (typeof g.WebSocket === "function") return;
-  g.WebSocket = WebSocketPolyfill as unknown as typeof globalThis.WebSocket;
-}
 
 export function isFramerWebhookPushEnabled(): boolean {
   const flag = process.env.FRAMER_PUSH_ON_WEBHOOK?.trim().toLowerCase();
@@ -35,37 +24,6 @@ export function isFramerWebhookPushEnabled(): boolean {
   return Boolean(
     process.env.FRAMER_PROJECT_URL?.trim() && process.env.FRAMER_API_KEY?.trim()
   );
-}
-
-async function withFramerCollection<T>(
-  fn: (ctx: {
-    target: import("framer-api").Collection;
-    fm: Record<FieldKey, import("framer-api").Field>;
-  }) => Promise<T>
-): Promise<T> {
-  const projectUrl = process.env.FRAMER_PROJECT_URL!.trim();
-  const apiKey = process.env.FRAMER_API_KEY!.trim();
-  const collectionName =
-    process.env.FRAMER_MU_COLLECTION?.trim() || "Market Updates";
-
-  ensureGlobalWebSocket();
-  const { connect } = await import("framer-api");
-  const framer = await connect(projectUrl, apiKey);
-  try {
-    const collections = await framer.getCollections();
-    const target = collections.find((c) => c.name === collectionName);
-    if (!target) {
-      throw new Error(
-        `Collection "${collectionName}" tidak ditemukan. Set FRAMER_MU_COLLECTION atau buat collection di Framer.`
-      );
-    }
-    assertWritableCollection(target);
-    const fields = await target.getFields();
-    const fm = mapFieldsByLabel(fields);
-    return await fn({ target, fm });
-  } finally {
-    await framer.disconnect();
-  }
 }
 
 function findFramerItemIdForDbRow(
@@ -87,7 +45,7 @@ export async function syncMarketRowToFramerAfterDbWrite(
 ): Promise<void> {
   const row: MarketRow = normalizeMarketRowForFramer(rawRow);
 
-  await withFramerCollection(async ({ target, fm }) => {
+  await withFramerMarketUpdatesCollection(async ({ target, fm }) => {
     const existingItems = await target.getItems();
     const existingFramerId = findFramerItemIdForDbRow(existingItems, row.id);
 
@@ -110,7 +68,7 @@ export async function syncMarketRowToFramerAfterDbWrite(
 export async function removeMarketUpdateFromFramerByDbId(
   dbId: number
 ): Promise<void> {
-  await withFramerCollection(async ({ target }) => {
+  await withFramerMarketUpdatesCollection(async ({ target }) => {
     const existingItems = await target.getItems();
     const framerId = findFramerItemIdForDbRow(existingItems, dbId);
     if (framerId) await target.removeItems([framerId]);

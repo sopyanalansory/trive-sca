@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { listMarketUpdatesFromFramer } from '@/lib/framer-market-updates-framer-read';
 import { scheduleMarketUpdateFramerSync } from '@/lib/framer-market-update-push';
 import { apiLogger, logRouteError } from '@/lib/logger';
 
@@ -36,6 +37,22 @@ function verifyBasicAuth(request: NextRequest): { success: boolean; error?: stri
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    const sourceParam = searchParams.get('source')?.trim().toLowerCase();
+    if (
+      sourceParam &&
+      sourceParam !== 'db' &&
+      sourceParam !== 'framer'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Parameter source harus db atau framer.',
+        },
+        { status: 400 }
+      );
+    }
+    const source = sourceParam === 'framer' ? 'framer' : 'db';
     
     // Pagination params
     const page = parseInt(searchParams.get('page') || '1');
@@ -54,6 +71,40 @@ export async function GET(request: NextRequest) {
     // Sorting params
     const sortBy = searchParams.get('sort_by') || 'created_at';
     const sortOrder = searchParams.get('sort_order')?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    if (source === 'framer') {
+      try {
+        const { data, pagination } = await listMarketUpdatesFromFramer({
+          page,
+          limit,
+          status,
+          researchType,
+          createdBy,
+          salesforceId,
+          search,
+          startDate,
+          endDate,
+          sortBy,
+          sortOrder,
+        });
+        return NextResponse.json({
+          success: true,
+          source: 'framer',
+          data,
+          pagination,
+        });
+      } catch (framerErr: unknown) {
+        const msg =
+          framerErr instanceof Error ? framerErr.message : String(framerErr);
+        if (msg.includes('FRAMER_PROJECT_URL')) {
+          return NextResponse.json(
+            { success: false, error: msg },
+            { status: 503 }
+          );
+        }
+        throw framerErr;
+      }
+    }
     
     // Build query conditions (applied after dedup by salesforce_id)
     const conditions: string[] = [];
@@ -175,6 +226,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
+      source: 'db',
       data: dataResult.rows,
       pagination: {
         page,

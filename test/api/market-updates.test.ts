@@ -10,14 +10,21 @@ import {
 const {
   mockScheduleMarketUpdateFramerSync,
   mockScheduleMarketUpdateRemovedFromFramer,
+  mockListMarketUpdatesFromFramer,
 } = vi.hoisted(() => ({
   mockScheduleMarketUpdateFramerSync: vi.fn(),
   mockScheduleMarketUpdateRemovedFromFramer: vi.fn(),
+  mockListMarketUpdatesFromFramer: vi.fn(),
 }));
 
 vi.mock("@/lib/framer-market-update-push", () => ({
   scheduleMarketUpdateFramerSync: mockScheduleMarketUpdateFramerSync,
   scheduleMarketUpdateRemovedFromFramer: mockScheduleMarketUpdateRemovedFromFramer,
+}));
+
+vi.mock("@/lib/framer-market-updates-framer-read", () => ({
+  listMarketUpdatesFromFramer: mockListMarketUpdatesFromFramer,
+  getMarketUpdateFromFramerByDbId: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => {
@@ -66,6 +73,7 @@ describe("/api/market-updates", () => {
     vi.mocked(pool.query).mockReset();
     mockScheduleMarketUpdateFramerSync.mockClear();
     mockScheduleMarketUpdateRemovedFromFramer.mockClear();
+    mockListMarketUpdatesFromFramer.mockReset();
   });
 
   describe("GET", () => {
@@ -78,8 +86,58 @@ describe("/api/market-updates", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.success).toBe(true);
+      expect(json.source).toBe("db");
       expect(json.data).toHaveLength(1);
       expect(json.pagination.totalItems).toBe(1);
+    });
+
+    it("returns 400 when source is invalid", async () => {
+      const res = await GET(getReq("/api/market-updates?source=cache"));
+      expect(res.status).toBe(400);
+      expect(mockListMarketUpdatesFromFramer).not.toHaveBeenCalled();
+    });
+
+    it("lists from Framer when source=framer", async () => {
+      mockListMarketUpdatesFromFramer.mockResolvedValueOnce({
+        data: [
+          {
+            id: 1,
+            research_type: "Daily Analysis/Strategy",
+            status: "Published",
+            title: "From Framer",
+            summary: null,
+            img_url: null,
+            economic_data_1: null,
+            economic_data_2: null,
+            economic_data_3: null,
+            economic_data_4: null,
+            economic_data_5: null,
+            meta_text: null,
+            full_content: "<p>x</p>",
+            created_by: "tester",
+            salesforce_id: "SF-1",
+            created_at: "2026-01-01T00:00:00.000Z",
+            updated_at: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalItems: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      });
+
+      const res = await GET(getReq("/api/market-updates?source=framer"));
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.source).toBe("framer");
+      expect(json.data).toHaveLength(1);
+      expect(json.data[0].title).toBe("From Framer");
+      expect(mockListMarketUpdatesFromFramer).toHaveBeenCalledTimes(1);
     });
 
     it("returns 500 when DB throws", async () => {
