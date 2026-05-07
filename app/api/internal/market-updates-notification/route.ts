@@ -16,6 +16,22 @@ function toText(value: unknown): string {
   return '';
 }
 
+function parseLoginNumbers(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    const normalized = value.map((item) => toText(item).trim()).filter(Boolean);
+    return Array.from(new Set(normalized));
+  }
+
+  const raw = toText(value).trim();
+  if (!raw) return [];
+
+  const splitValues = raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set(splitValues));
+}
+
 function verifyBasicAuth(request: NextRequest): { success: boolean; error?: string } {
   const authHeader = request.headers.get('Authorization');
 
@@ -65,11 +81,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const loginNumber = toText(body?.login_number).trim();
+    const loginNumbers = parseLoginNumbers(body?.login_number);
     const title = toText(body?.title).trim();
     const summary = toText(body?.summary).trim();
 
-    if (!loginNumber || !title) {
+    if (loginNumbers.length === 0 || !title) {
       return NextResponse.json(
         {
           success: false,
@@ -79,17 +95,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await enqueueMarketUpdateNotificationJob({
-      salesforceId: loginNumber,
-      title,
-      summary,
-    });
+    await Promise.all(
+      loginNumbers.map((loginNumber) =>
+        enqueueMarketUpdateNotificationJob({
+          salesforceId: loginNumber,
+          title,
+          summary,
+        })
+      )
+    );
 
     return NextResponse.json({
       success: true,
       message: 'Notifikasi market update berhasil di-enqueue',
       data: {
-        login_number: loginNumber,
+        login_number: loginNumbers,
         title,
         summary,
       },

@@ -102,6 +102,61 @@ describe("POST /api/internal/market-updates-notification", () => {
 
     const json = await res.json();
     expect(json.success).toBe(true);
-    expect(json.data.login_number).toBe("123456");
+    expect(json.data.login_number).toEqual(["123456"]);
+  });
+
+  it("supports comma-separated login_number and enqueues per login", async () => {
+    mockIsEnabled.mockReturnValueOnce(true);
+    mockEnqueue.mockResolvedValue(undefined);
+
+    const res = await POST(
+      postJson(
+        "/api/internal/market-updates-notification",
+        {
+          login_number: "12345678, 87654321,12345678",
+          title: "Multi login update",
+          summary: "Summary",
+        },
+        auth
+      )
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockEnqueue).toHaveBeenCalledTimes(2);
+    expect(mockEnqueue).toHaveBeenNthCalledWith(1, {
+      salesforceId: "12345678",
+      title: "Multi login update",
+      summary: "Summary",
+    });
+    expect(mockEnqueue).toHaveBeenNthCalledWith(2, {
+      salesforceId: "87654321",
+      title: "Multi login update",
+      summary: "Summary",
+    });
+
+    const json = await res.json();
+    expect(json.data.login_number).toEqual(["12345678", "87654321"]);
+  });
+
+  it("supports login_number array and enqueues per login", async () => {
+    mockIsEnabled.mockReturnValueOnce(true);
+    mockEnqueue.mockResolvedValue(undefined);
+
+    const res = await POST(
+      postJson(
+        "/api/internal/market-updates-notification",
+        {
+          login_number: ["12345678", "87654321", "12345678"],
+          title: "Array login update",
+          summary: "Summary",
+        },
+        auth
+      )
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockEnqueue).toHaveBeenCalledTimes(2);
+    const json = await res.json();
+    expect(json.data.login_number).toEqual(["12345678", "87654321"]);
   });
 });
